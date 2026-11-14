@@ -1766,7 +1766,7 @@ Saya yang menjalankan amanah,
         '<div class="page-head-main">' +
           '<a class="back-link" href="#/">' + UI.icon('chevron') + 'Papan Pemuka</a>' +
           '<div class="title-row"><span class="page-icon tone-slate">' + UI.icon('settings') + '</span>' +
-          '<div><h2>Tetapan sistem</h2><p>Sambungan Google Sheets, sandaran data dan maklumat aplikasi.</p></div></div>' +
+          '<div><h2>Tetapan sistem</h2><p>Tetapan umum, sandaran data dan maklumat aplikasi.</p></div></div>' +
         '</div>' +
       '</section>' +
 
@@ -1774,21 +1774,11 @@ Saya yang menjalankan amanah,
 
         '<section class="card">' +
           '<div class="card-head">' +
-            '<div><span class="eyebrow">Pangkalan data</span><h3>Sambungan Google Sheets</h3></div>' +
+            '<div><span class="eyebrow">Sistem</span><h3>Tetapan umum</h3></div>' +
             '<span class="conn-badge conn-badge--' + statusTone + '"><span class="dot"></span>' + statusLabel + '</span>' +
           '</div>' +
           '<div class="card-body">' +
-            '<form id="connForm" novalidate>' +
-              '<div class="field">' +
-                '<label for="cfgUrl">URL Web App Apps Script</label>' +
-                '<input id="cfgUrl" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="' + UI.esc(cfg.url) + '">' +
-                '<p class="hint">Kosongkan untuk kekal dalam mod demo. URL berakhir dengan <code>/exec</code>.</p>' +
-              '</div>' +
-              '<div class="field">' +
-                '<label for="cfgToken">Token API <span class="muted">(pilihan)</span></label>' +
-                '<input id="cfgToken" type="password" autocomplete="off" placeholder="Sama seperti TOKEN dalam Code.gs" value="' + UI.esc(cfg.token) + '">' +
-                '<p class="hint">Jika <code>TOKEN</code> ditetapkan dalam Apps Script, masukkan nilai yang sama di sini.</p>' +
-              '</div>' +
+            '<form id="cfgForm" novalidate>' +
               '<div class="field">' +
                 '<label for="cfgTeam">Nama pasukan / daerah</label>' +
                 '<input id="cfgTeam" type="text" value="' + UI.esc(cfg.teamLabel) + '" placeholder="Pasukan Teknikal ICT Daerah Selangau">' +
@@ -1800,12 +1790,8 @@ Saya yang menjalankan amanah,
               '</div>' +
               '<div class="form-actions">' +
                 '<button class="btn btn-primary" type="submit" id="saveCfgBtn">' + UI.icon('check') + 'Simpan Tetapan</button>' +
-                '<button class="btn btn-ghost" type="button" id="testBtn">' + UI.icon('sheet') + 'Uji Sambungan</button>' +
               '</div>' +
             '</form>' +
-            '<div id="connResult" class="inline-result" hidden></div>' +
-            '<div class="divider"></div>' +
-            '<p class="mini-note">' + UI.icon('info') + '<span>Rekod disimpan terus ke tab Google Sheets melalui Apps Script. Jika <code>TOKEN</code> ditetapkan, pastikan ia sepadan.</span></p>' +
           '</div>' +
         '</section>' +
 
@@ -1868,30 +1854,16 @@ Saya yang menjalankan amanah,
   }
 
   function bindSettings() {
-    const form = document.getElementById('connForm');
-    const result = document.getElementById('connResult');
-
-    function showResult(message, type) {
-      if (!result) return;
-      result.hidden = false;
-      result.className = 'inline-result inline-result--' + type;
-      result.innerHTML = UI.icon(type === 'error' ? 'alert' : 'check') + '<span>' + UI.esc(message) + '</span>';
-    }
+    const form = document.getElementById('cfgForm');
 
     function saveConfigFromForm() {
-      const url = document.getElementById('cfgUrl').value.trim();
-      const token = document.getElementById('cfgToken').value.trim();
       const teamLabel = document.getElementById('cfgTeam').value.trim() || 'Pasukan Teknikal ICT Daerah Selangau';
       const officialEmail = document.getElementById('cfgEmail').value.trim();
-      if (url && !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/i.test(url) && !/^https:\/\//i.test(url)) {
-        throw new Error('URL mesti bermula dengan https://');
-      }
       if (officialEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(officialEmail)) {
         throw new Error('E-mel rasmi PTIS tidak sah. Semak ejaan alamat e-mel.');
       }
       const prev = Store.getConfig();
-      Store.saveConfig({ url: url, token: token, teamLabel: teamLabel, officialEmail: officialEmail });
-      if (prev.url !== url || prev.token !== token) Store.clearCache();
+      Store.saveConfig({ url: prev.url, token: prev.token, teamLabel: teamLabel, officialEmail: officialEmail });
       state.all = null;
       updateModeUI();
       renderNav();
@@ -1904,40 +1876,10 @@ Saya yang menjalankan amanah,
         e.preventDefault();
         try {
           saveConfigFromForm();
-          UI.toast('Tetapan sambungan disimpan.', 'success');
+          UI.toast('Tetapan disimpan.', 'success');
           renderSettings();
         } catch (err) {
-          showResult(err.message, 'error');
-        }
-      });
-    }
-
-    const testBtn = document.getElementById('testBtn');
-    if (testBtn) {
-      testBtn.addEventListener('click', async function () {
-        testBtn.disabled = true;
-        const original = testBtn.innerHTML;
-        testBtn.innerHTML = '<span class="spinner"></span>Menguji...';
-        try {
-          const cfg = saveConfigFromForm();
-          if (!cfg.url) {
-            showResult('Mod demo aktif. Masukkan URL Apps Script untuk menyambung Google Sheets.', 'info');
-            return;
-          }
-          state.all = null;
-          const res = await Store.ping();
-          showResult('Sambungan berjaya! Respons ' + res.latency + ' ms. Google Sheets sedia digunakan.', 'success');
-          UI.toast('Google Sheets berjaya disambungkan.', 'success');
-          updateModeUI();
-          state.all = null;
-          await ensureAll(true);
-          updateNavCounts();
-        } catch (err) {
-          showResult((err && err.message) || 'Sambungan gagal.', 'error');
-          updateModeUI();
-        } finally {
-          testBtn.disabled = false;
-          testBtn.innerHTML = original;
+          UI.toast(err.message, 'error');
         }
       });
     }

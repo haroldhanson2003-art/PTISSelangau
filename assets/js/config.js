@@ -6,7 +6,7 @@ window.APP_CONFIG = {
   appName: 'PTIS',
   fullName: 'Pasukan Teknikal ICT Daerah Selangau',
   organisation: 'Pasukan Teknikal ICT Daerah Selangau',
-  version: '1.9.30',
+  version: '1.9.31',
 
   // Tetapan Google Apps Script (boleh diisi di halaman Tetapan)
   appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzTcMXBF4g_hOyphMrivqcXZ7V1aTskZrwjgQsgjKiZTuVJgUxDuspvG6HUSK6X8r--/exec',
