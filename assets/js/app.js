@@ -1691,7 +1691,7 @@ Saya yang menjalankan amanah,
         '<div class="card-head"><div><span class="eyebrow">SCST</span><h3>Pautan SCST Sekolah Selangau</h3></div><span class="badge badge--gold">' + UI.esc(String(scstSchools().length)) + ' sekolah</span></div>' +
         '<div class="card-body">' +
           '<p class="hint" style="margin-bottom:.75rem">Buka modul SCST sekolah (dtpcare) mengikut kod sekolah.</p>' +
-          '<div class="form-actions form-actions--wrap">' +
+          '<div class="form-actions form-actions--wrap guide-scst-links">' +
             scstSchools().map(function (s) {
               var kod = s.kodSekolah || s.kod || '';
               var nama = s.namaSekolah || s.nama || kod;
@@ -1722,6 +1722,20 @@ Saya yang menjalankan amanah,
   }
 
   function bindGuide() {
+    const letterLink = view.querySelector('a[href="#surat-rasmi"]');
+    if (letterLink) {
+      letterLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        const section = document.getElementById('surat-rasmi');
+        if (section) {
+          section.scrollIntoView({
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    }
+
     const copyEmailBtn = document.getElementById('copyEmailBtn');
     if (copyEmailBtn) {
       copyEmailBtn.addEventListener('click', function () {
