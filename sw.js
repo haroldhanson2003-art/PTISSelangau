@@ -2,7 +2,7 @@
    Cache shell aplikasi supaya boleh dibuka luar talian.
    Data Google Sheets sentiasa diambil dari rangkaian (dengan cache sandaran di localStorage). */
 
-const VERSION = 'ptis-v1.9.31';
+const VERSION = 'ptis-v1.9.34';
 const CACHE = VERSION;
 
 const CORE = [

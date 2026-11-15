@@ -108,6 +108,7 @@
     });
     bottom += '<button class="bn-item" id="moreNavBtn" data-action="open-sidebar">' + UI.icon('grid') + '<span>Lagi</span></button>';
     bottomnav.innerHTML = bottom;
+    updateNavCounts();
   }
 
   function escShort(label) {
@@ -137,7 +138,9 @@
     document.querySelectorAll('[data-count-for]').forEach(function (el) {
       const key = el.getAttribute('data-count-for');
       const rows = state.all && state.all[key] ? state.all[key] : [];
-      el.textContent = rows.length;
+      el.textContent = key === 'scst'
+        ? ((APP_CONFIG.selangauSchools || []).length)
+        : rows.length;
     });
   }
 
@@ -153,10 +156,18 @@
     if (pill) {
       pill.className = 'mode-pill ' + (!remote ? 'is-demo' : offline ? 'is-offline' : 'is-live');
       pill.title = !remote
-        ? 'Demo — Data contoh disimpan dalam pelayar. Sambung Google Sheets di Tetapan.'
+        ? 'Demo — Data contoh disimpan pada peranti ini.'
         : offline
           ? 'Luar Talian — Sambungan terputus. Data cache dipaparkan.'
           : 'Google Sheets — Data disegerak dengan Google Sheets.';
+    }
+    const storageLabel = document.getElementById('dataStorageLabel');
+    if (storageLabel) {
+      storageLabel.textContent = !remote
+        ? 'Data demo disimpan pada peranti ini'
+        : offline
+          ? 'Data cache dipaparkan · menunggu sambungan'
+          : 'Data disegerakkan dengan Google Sheets';
     }
     updateSyncPill();
   }
@@ -218,10 +229,16 @@
 
     if (r.name === 'settings') {
       renderSettings();
+      if (!state.all) {
+        ensureAll().then(function () {
+          if (token === state.loadToken && state.route.name === 'settings') refreshSettingsStatusUI();
+        });
+      }
       return;
     }
     if (r.name === 'guide') {
       renderGuide();
+      if (!state.all) ensureAll();
       return;
     }
 
@@ -1758,8 +1775,8 @@ Saya yang menjalankan amanah,
     const cfg = Store.getConfig();
     const remote = Store.isRemote();
     const cache = Store.cacheInfo();
-    const statusLabel = !remote ? 'Mod Demo' : Store.status.offline ? 'Luar Talian' : 'Bersambung';
-    const statusTone = !remote ? 'demo' : Store.status.offline ? 'offline' : 'live';
+    const statusLabel = !remote ? 'Mod Demo' : Store.status.offline ? 'Luar Talian' : Store.status.lastSync ? 'Bersambung' : 'Menyemak...';
+    const statusTone = !remote ? 'demo' : Store.status.offline ? 'offline' : Store.status.lastSync ? 'live' : 'demo';
 
     view.innerHTML =
       '<section class="page-head">' +
@@ -1775,7 +1792,7 @@ Saya yang menjalankan amanah,
         '<section class="card">' +
           '<div class="card-head">' +
             '<div><span class="eyebrow">Sistem</span><h3>Tetapan umum</h3></div>' +
-            '<span class="conn-badge conn-badge--' + statusTone + '"><span class="dot"></span>' + statusLabel + '</span>' +
+            '<span id="settingsConnBadge" class="conn-badge conn-badge--' + statusTone + '"><span class="dot"></span>' + statusLabel + '</span>' +
           '</div>' +
           '<div class="card-body">' +
             '<form id="cfgForm" novalidate>' +
@@ -1792,6 +1809,7 @@ Saya yang menjalankan amanah,
                 '<button class="btn btn-primary" type="submit" id="saveCfgBtn">' + UI.icon('check') + 'Simpan Tetapan</button>' +
               '</div>' +
             '</form>' +
+            '<p id="settingsSyncNotice" class="hint settings-sync-error" role="status" hidden></p>' +
           '</div>' +
         '</section>' +
 
@@ -1802,9 +1820,9 @@ Saya yang menjalankan amanah,
           '<div class="card-body">' +
             '<div class="meta-list">' +
               '<div><span>Mod data</span><strong>' + (remote ? 'Google Sheets' : 'Demo (pelayar)') + '</strong></div>' +
-              '<div><span>Rekod cache</span><strong>' + cache.count + ' rekod</strong></div>' +
-              '<div><span>Cache terakhir</span><strong>' + (cache.newest ? UI.fmtDateTime(cache.newest) : '—') + '</strong></div>' +
-              '<div><span>Penyegerakan terakhir</span><strong>' + (Store.status.lastSync ? UI.fmtDateTime(Store.status.lastSync) : '—') + '</strong></div>' +
+              '<div><span>Rekod cache</span><strong id="settingsCacheCount">' + cache.count + ' rekod</strong></div>' +
+              '<div><span>Cache terakhir</span><strong id="settingsCacheNewest">' + (cache.newest ? UI.fmtDateTime(cache.newest) : '—') + '</strong></div>' +
+              '<div><span>Penyegerakan terakhir</span><strong id="settingsLastSync">' + (Store.status.lastSync ? UI.fmtDateTime(Store.status.lastSync) : '—') + '</strong></div>' +
             '</div>' +
             '<div class="form-actions form-actions--wrap">' +
               '<button class="btn btn-ghost" id="backupBtn">' + UI.icon('download') + 'Sandaran JSON</button>' +
@@ -1851,6 +1869,39 @@ Saya yang menjalankan amanah,
 
     bindSettings();
     updateModeUI();
+    refreshSettingsStatusUI();
+  }
+
+  function refreshSettingsStatusUI() {
+    const badge = document.getElementById('settingsConnBadge');
+    if (!badge) return;
+    const remote = Store.isRemote();
+    const offline = remote && Store.status.offline;
+    const cache = Store.cacheInfo();
+    badge.className = 'conn-badge conn-badge--' + (!remote ? 'demo' : offline ? 'offline' : 'live');
+    badge.innerHTML = '<span class="dot"></span>' + (!remote ? 'Mod Demo' : offline ? 'Luar Talian' : 'Bersambung');
+
+    const count = document.getElementById('settingsCacheCount');
+    const newest = document.getElementById('settingsCacheNewest');
+    const lastSync = document.getElementById('settingsLastSync');
+    if (count) count.textContent = cache.count + ' rekod';
+    if (newest) newest.textContent = cache.newest ? UI.fmtDateTime(cache.newest) : '—';
+    if (lastSync) lastSync.textContent = Store.status.lastSync ? UI.fmtDateTime(Store.status.lastSync) : '—';
+
+    const notice = document.getElementById('settingsSyncNotice');
+    if (!notice) return;
+    if (offline) {
+      notice.textContent = 'Sambungan terganggu. ' +
+        (Store.status.lastError || 'Tidak dapat membaca data Google Sheets.') +
+        ' Semak tab dan kebenaran Apps Script, kemudian cuba muat semula.';
+      notice.hidden = false;
+    } else if (remote && Store.status.lastSync && cache.count === 0) {
+      notice.textContent = 'Sambungan aktif, tetapi belum ada rekod dalam Google Sheets. Rekod akan muncul selepas ditambah ke hamparan.';
+      notice.hidden = false;
+    } else {
+      notice.hidden = true;
+      notice.textContent = '';
+    }
   }
 
   function bindSettings() {

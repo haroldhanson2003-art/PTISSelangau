@@ -56,8 +56,12 @@
   function getConfig() {
     const saved = readJSON(CFG_KEY, {}) || {};
     return {
-      url: saved.url || APP_CONFIG.appsScriptUrl || '',
-      token: saved.token || APP_CONFIG.apiToken || '',
+      url: Object.prototype.hasOwnProperty.call(saved, 'url')
+        ? String(saved.url || '')
+        : (APP_CONFIG.appsScriptUrl || ''),
+      token: Object.prototype.hasOwnProperty.call(saved, 'token')
+        ? String(saved.token || '')
+        : (APP_CONFIG.apiToken || ''),
       teamLabel: saved.teamLabel || 'Pasukan Teknikal ICT Daerah Selangau',
       officialEmail: saved.officialEmail || APP_CONFIG.officialEmail || ''
     };
@@ -66,13 +70,18 @@
   function saveConfig(patch) {
     const current = getConfig();
     const next = Object.assign({}, current, patch);
+    const connectionChanged = current.url !== String(next.url || '').trim() ||
+      current.token !== String(next.token || '').trim();
     next.url = String(next.url || '').trim();
     next.token = String(next.token || '').trim();
     next.teamLabel = String(next.teamLabel || 'Pasukan Teknikal ICT Daerah Selangau').trim();
     next.officialEmail = String(next.officialEmail || '').trim();
     writeJSON(CFG_KEY, next);
-    status.offline = false;
-    status.lastError = null;
+    if (connectionChanged) {
+      status.offline = false;
+      status.lastError = null;
+      status.lastSync = null;
+    }
     return next;
   }
 
@@ -380,7 +389,6 @@
       const data = await callRemote({ action: 'ping' });
       status.offline = false;
       status.lastError = null;
-      status.lastSync = new Date().toISOString();
       return { latency: Date.now() - started, data: data };
     },
 

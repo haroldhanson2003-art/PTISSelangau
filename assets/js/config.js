@@ -1,14 +1,14 @@
 /* ==========================================================================
    PTIS · Konfigurasi aplikasi
-   Nilai ini boleh diubah tanpa sentuh kod lain.
+   Sambungan lalai dikonfigurasi di sini; fail ini dihantar kepada semua pelawat.
    ========================================================================== */
 window.APP_CONFIG = {
   appName: 'PTIS',
   fullName: 'Pasukan Teknikal ICT Daerah Selangau',
   organisation: 'Pasukan Teknikal ICT Daerah Selangau',
-  version: '1.9.31',
+  version: '1.9.34',
 
-  // Tetapan Google Apps Script (boleh diisi di halaman Tetapan)
+  // Endpoint Apps Script yang digunakan oleh aplikasi. Nilai ini boleh dilihat dalam kod pelayar.
   appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzTcMXBF4g_hOyphMrivqcXZ7V1aTskZrwjgQsgjKiZTuVJgUxDuspvG6HUSK6X8r--/exec',
   apiToken: '',
 
@@ -16,7 +16,7 @@ window.APP_CONFIG = {
   isdUrl: 'https://isd.moe.gov.my',
   officialEmail: 'haroldhanson@moe.gov.my', // E-mel rasmi penerima permohonan; boleh diisi di Tetapan
 
-  // Log masuk Google (boleh diisi di halaman Tetapan)
+  // Log masuk Google (dinyahtetapkan)
   // clientId mesti sama dengan CLIENT_ID dalam apps-script/Code.gs
   auth: {
     enabled: false,
@@ -24,7 +24,7 @@ window.APP_CONFIG = {
     allowedDomains: ['moe.gov.my', 'moe-dl.edu.my']
   },
 
-  // Pentadbir sistem (Tetapan): hanya e-mel ini boleh akses halaman Tetapan
+  // Senarai pentadbir legacy; tiada perlindungan akses sisi pelayan yang bergantung pada nilai ini.
   adminEmails: ['haroldhanson@moe.gov.my'],
 
   // Tempoh tamat permintaan API (ms)

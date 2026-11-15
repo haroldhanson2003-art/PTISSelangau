@@ -6,7 +6,8 @@
   "description": "PTIS · Sistem pengurusan Pasukan Teknikal ICT Daerah Selangau dengan Google Sheets sebagai pangkalan data.",
   "scripts": {
     "dev": "node tools/serve.mjs",
-    "start": "node tools/serve.mjs"
+    "start": "node tools/serve.mjs",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=18"

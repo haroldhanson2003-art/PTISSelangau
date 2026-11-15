@@ -2,7 +2,7 @@
 
 Connect PTIS to Google Sheets via Apps Script. The backend uses a simple Web App API (no Google Sign-In).
 
-> **Security note:** if the Web App is deployed as **Anyone**, anyone who knows the `/exec` URL (and API token, if none is set) can read/write data. Use a strong `TOKEN`, keep the URL/token private, and restrict access to the spreadsheet.
+> **Security note:** PTIS is a public static client. The `/exec` URL and any token configured in the client are visible to visitors. With a Web App deployed as **Anyone**, anyone can call the API to read/write its data; a client-side token is not a secret or an access-control boundary. Do not use this setup for personal, confidential, or restricted data. Use an authenticated backend with server-side authorization for that.
 
 ## 1) What you need
 - A Google account (owns the Sheet and Apps Script)
@@ -12,7 +12,7 @@ Connect PTIS to Google Sheets via Apps Script. The backend uses a simple Web App
 ## 2) Setup steps
 1. **Create a Google Sheet** (e.g. `PTIS Selangau Data`).
 2. **Extensions → Apps Script**. Replace default code with the full contents of [`apps-script/Code.gs`](./Code.gs) and **Save**.
-3. **(Recommended) Set an API token** in `Code.gs`:
+3. **Optional friction only:** a `TOKEN` can be set in `Code.gs`, but if placed in this public client it is discoverable and does not protect the data:
    ```js
    const TOKEN = 'your-long-random-secret';
    ```
@@ -21,10 +21,7 @@ Connect PTIS to Google Sheets via Apps Script. The backend uses a simple Web App
    - **Execute as:** Me
    - **Who has access:** Anyone
    - Copy the Web App URL ending with `/exec`.
-6. **Configure PTIS** → **Tetapan**:
-   - **URL Web App Apps Script:** `/exec` URL
-   - **Token API (pilihan):** same as `TOKEN` in `Code.gs` (or blank)
-   - Save and **Uji Sambungan**.
+6. Set `appsScriptUrl` (and optional `apiToken`) in `assets/js/config.js`, then commit and deploy PTIS. The in-app Tetapan page intentionally does not expose connection details.
 
 > After editing `Code.gs` (including changing `TOKEN`), create a **new deployment/version** so the `/exec` URL serves the latest code.
 
