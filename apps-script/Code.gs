@@ -18,6 +18,8 @@
  */
 
 const TOKEN = ''; // Pilihan: frasa rahsia panjang, contoh: 'ptis-2026-...'
+const GOOGLE_CLIENT_ID = ''; // OAuth Client ID (Web application). Kosong = log masuk dimatikan.
+const ALLOWED_DOMAINS = ['moe.gov.my', 'moe-dl.edu.my']; // Mesti sama dengan allowedDomains dalam config.js
 const TIMEZONE = Session.getScriptTimeZone();
 
 const SHEETS = {
@@ -71,6 +73,7 @@ function doGet(e) {
   return handleRequest({
     action: params.action || 'ping',
     token: params.token || '',
+    session: params.session || '',
     sheet: params.sheet || '',
     id: params.id || '',
     record: null
@@ -94,6 +97,8 @@ function handleRequest(req) {
     if (TOKEN && String(req.token || '') !== TOKEN) {
       return jsonResponse_({ ok: false, code: 'TOKEN_INVALID', error: 'Token API tidak sah. Semak Tetapan aplikasi.' });
     }
+
+    if (action !== 'ping') verifyUser_(req.session);
 
     if (action === 'ping') {
       return jsonResponse_({
@@ -346,6 +351,32 @@ function deleteRecord_(name, id) {
 /* =====================================================================
  * Utiliti
  * ===================================================================== */
+
+function verifyUser_(idToken) {
+  if (!GOOGLE_CLIENT_ID) return null;
+
+  const denied = function (message) {
+    const err = new Error(message || 'Sila log masuk dengan akaun rasmi.');
+    err.code = 'AUTH_REQUIRED';
+    return err;
+  };
+  if (!idToken) throw denied();
+
+  const res = UrlFetchApp.fetch(
+    'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken),
+    { muteHttpExceptions: true }
+  );
+  if (res.getResponseCode() !== 200) throw denied();
+
+  const info = JSON.parse(res.getContentText());
+  if (info.aud !== GOOGLE_CLIENT_ID || String(info.email_verified) !== 'true') throw denied();
+
+  const domain = String(info.email || '').split('@')[1] || '';
+  if (ALLOWED_DOMAINS.indexOf(domain.toLowerCase()) < 0) {
+    throw denied('Akaun ini tidak dibenarkan mengakses PTIS.');
+  }
+  return info;
+}
 
 function uploadFile_(req) {
   const mime = String(req.mime || '');

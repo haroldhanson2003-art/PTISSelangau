@@ -329,6 +329,7 @@
         throw new Error('Respons pelayan tidak sah. Pastikan Web App dikongsi kepada "Sesiapa sahaja".');
       }
       if (!json || json.ok !== true) {
+        if (json && json.code === 'AUTH_REQUIRED' && window.Auth) Auth.handleAuthError();
         const err = new Error((json && json.error) || 'Permintaan kepada Google Sheets gagal.');
         if (json && json.code) err.code = json.code;
         throw err;

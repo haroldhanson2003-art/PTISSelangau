@@ -25,6 +25,19 @@ Connect PTIS to Google Sheets via Apps Script. The backend uses a simple Web App
 
 > After editing `Code.gs` (including changing `TOKEN`), create a **new deployment/version** so the `/exec` URL serves the latest code.
 
+## 2b) Log masuk Google (pilihan, disyorkan)
+Log masuk membenarkan hanya akaun rasmi (`moe.gov.my`, `moe-dl.edu.my`) mengakses data. Ia dimatikan selagi `clientId` kosong.
+1. **Google Cloud Console** → pilih/buat projek → **APIs & Services → OAuth consent screen**. Pilih **Internal** jika organisasi menggunakan Google Workspace.
+2. **Credentials → Create credentials → OAuth client ID** → jenis **Web application**.
+3. **Authorized JavaScript origins**: tambah `https://haroldhanson2003-art.github.io` (dan `http://localhost:5173` untuk ujian).
+4. Salin **Client ID**, kemudian isi:
+   - `apps-script/Code.gs`: `const GOOGLE_CLIENT_ID = '...';`
+   - `assets/js/config.js`: `auth.clientId: '...'`
+5. Pastikan `ALLOWED_DOMAINS` (Code.gs) dan `allowedDomains` (config.js) sama.
+6. Deploy **new version** Web App. Pelayan menolak sebarang permintaan tanpa token log masuk yang sah (kecuali semakan sambungan `ping`).
+
+> Mod Demo tidak memerlukan log masuk. Pengguna boleh pilih "Teruskan dalam Mod Demo" pada skrin log masuk.
+
 ## 3) Sheets & headers
 | Sheet | Headers |
 |---|---|

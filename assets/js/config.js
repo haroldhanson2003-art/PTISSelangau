@@ -16,10 +16,10 @@ window.APP_CONFIG = {
   isdUrl: 'https://isd.moe.gov.my',
   officialEmail: 'haroldhanson@moe.gov.my', // E-mel rasmi penerima permohonan; boleh diisi di Tetapan
 
-  // Log masuk Google (dinyahtetapkan)
-  // clientId mesti sama dengan CLIENT_ID dalam apps-script/Code.gs
+  // Log masuk Google. Kosong = dinyahaktifkan.
+  // clientId mesti sama dengan GOOGLE_CLIENT_ID dalam apps-script/Code.gs
+  // allowedDomains mesti sama dengan ALLOWED_DOMAINS dalam apps-script/Code.gs
   auth: {
-    enabled: false,
     clientId: '',
     allowedDomains: ['moe.gov.my', 'moe-dl.edu.my']
   },
