@@ -281,7 +281,7 @@
       t = 'Panduan Laporan';
       document.title = 'Panduan Laporan · PTIS';
     } else {
-      document.title = 'PTIS · Pasukan Teknikal ICT Daerah Selangau';
+      document.title = 'PTIS · Pasukan Teknikal ICT Sekolah Daerah Selangau';
     }
     if (crumb) crumb.textContent = c;
     if (title) title.textContent = t;
@@ -1518,7 +1518,7 @@ Jabatan Pendidikan Negeri Sarawak
 Jalan Diplomatik, Off Jalan Bako
 93050 Petra Jaya, Kuching, Sarawak
 
-(u.p.: Sektor Pengurusan Maklumat ICT — Pasukan Teknikal ICT Daerah Selangau)
+(u.p.: Sektor Pengurusan Maklumat ICT — Pasukan Teknikal ICT Sekolah Daerah Selangau)
 
 Tuan/Puan,
 
@@ -1539,7 +1539,7 @@ Dengan segala hormatnya perkara di atas adalah dirujuk.
 
 4. Keadaan ini menjejaskan [nyatakan kesan — contoh: pelaksanaan PdP berasaskan digital, urusan pentadbiran sekolah dan persediaan peperiksaan berasaskan komputer].
 
-5. Sehubungan itu, pihak sekolah memohon jasa baik pihak tuan/puan untuk mengaturkan lawatan juruteknik Pasukan Teknikal ICT Daerah Selangau bagi tujuan pemeriksaan dan pelaksanaan kerja berkenaan.
+5. Sehubungan itu, pihak sekolah memohon jasa baik pihak tuan/puan untuk mengaturkan lawatan juruteknik Pasukan Teknikal ICT Sekolah Daerah Selangau bagi tujuan pemeriksaan dan pelaksanaan kerja berkenaan.
 
 6. Sebarang pertanyaan lanjut boleh dirujuk kepada [nama pegawai perhubungan], [jawatan], di talian [no. telefon] atau e-mel [alamat e-mel].
 
@@ -1563,13 +1563,13 @@ s.k.  Pegawai Pendidikan Daerah [Daerah]
 
   const OFFICIAL_EMAIL_SUBJECT = 'PERMOHONAN KHIDMAT BANTUAN TEKNIKAL ICT — [JENIS KERJA] — [NAMA SEKOLAH]';
 
-  const OFFICIAL_EMAIL_BODY = `Kepada Sektor Pengurusan Maklumat ICT / Pasukan Teknikal ICT Daerah Selangau,
+  const OFFICIAL_EMAIL_BODY = `Kepada Sektor Pengurusan Maklumat ICT / Pasukan Teknikal ICT Sekolah Daerah Selangau,
 
 PERMOHONAN KHIDMAT BANTUAN TEKNIKAL ICT
 
 Tuan/Puan,
 
-Dengan segala hormatnya perkara di atas adalah dirujuk. Pihak sekolah memohon lawatan juruteknik Pasukan Teknikal ICT Daerah Selangau bagi kerja teknikal berikut:
+Dengan segala hormatnya perkara di atas adalah dirujuk. Pihak sekolah memohon lawatan juruteknik Pasukan Teknikal ICT Sekolah Daerah Selangau bagi kerja teknikal berikut:
 
 1. Nama sekolah       : [NAMA PENUH SEKOLAH]
 2. Kod sekolah        : [KOD SEKOLAH]
@@ -1932,7 +1932,7 @@ Saya yang menjalankan amanah,
             '<form id="cfgForm" novalidate>' +
               '<div class="field">' +
                 '<label for="cfgTeam">Nama pasukan / daerah</label>' +
-                '<input id="cfgTeam" type="text" value="' + UI.esc(cfg.teamLabel) + '" placeholder="Pasukan Teknikal ICT Daerah Selangau">' +
+                '<input id="cfgTeam" type="text" value="' + UI.esc(cfg.teamLabel) + '" placeholder="Pasukan Teknikal ICT Sekolah Daerah Selangau">' +
               '</div>' +
               '<div class="field">' +
                 '<label for="cfgEmail">E-mel rasmi PTIS <span class="muted">(penerima permohonan)</span></label>' +
@@ -1993,7 +1993,7 @@ Saya yang menjalankan amanah,
           '<div class="about-mark"><img src="assets/img/logo.png" alt="PTIS"></div>' +
           '<div>' +
             '<span class="eyebrow">Tentang</span>' +
-            '<h3>Pasukan Teknikal ICT Daerah Selangau</h3>' +
+            '<h3>Pasukan Teknikal ICT Sekolah Daerah Selangau</h3>' +
             '<p class="body-text">Sistem pengurusan data PTIS yang menyatukan pergerakan, pelaporan kunjung bantu, aset dan maklumat pasukan sekolah.</p>' +
             '<div class="about-vm"><strong>Visi</strong><p>' + UI.esc(APP_CONFIG.visi) + '</p></div>' +
             '<div class="about-vm"><strong>Misi</strong><p>' + UI.esc(APP_CONFIG.misi) + '</p></div>' +
@@ -2045,7 +2045,7 @@ Saya yang menjalankan amanah,
     const form = document.getElementById('cfgForm');
 
     function saveConfigFromForm() {
-      const teamLabel = document.getElementById('cfgTeam').value.trim() || 'Pasukan Teknikal ICT Daerah Selangau';
+      const teamLabel = document.getElementById('cfgTeam').value.trim() || 'Pasukan Teknikal ICT Sekolah Daerah Selangau';
       const officialEmail = document.getElementById('cfgEmail').value.trim();
       if (officialEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(officialEmail)) {
         throw new Error('E-mel rasmi PTIS tidak sah. Semak ejaan alamat e-mel.');

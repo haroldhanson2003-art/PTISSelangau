@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "PTIS · Sistem pengurusan Pasukan Teknikal ICT Daerah Selangau dengan Google Sheets sebagai pangkalan data.",
+  "description": "PTIS · Sistem pengurusan Pasukan Teknikal ICT Sekolah Daerah Selangau dengan Google Sheets sebagai pangkalan data.",
   "scripts": {
     "dev": "node tools/serve.mjs",
     "start": "node tools/serve.mjs",

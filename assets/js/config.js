@@ -4,8 +4,8 @@
    ========================================================================== */
 window.APP_CONFIG = {
   appName: 'PTIS',
-  fullName: 'Pasukan Teknikal ICT Daerah Selangau',
-  organisation: 'Pasukan Teknikal ICT Daerah Selangau',
+  fullName: 'Pasukan Teknikal ICT Sekolah Daerah Selangau',
+  organisation: 'Pasukan Teknikal ICT Sekolah Daerah Selangau',
   version: '1.9.37',
 
   // Endpoint Apps Script yang digunakan oleh aplikasi. Nilai ini boleh dilihat dalam kod pelayar.

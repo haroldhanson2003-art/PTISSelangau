@@ -62,7 +62,7 @@
       token: Object.prototype.hasOwnProperty.call(saved, 'token')
         ? String(saved.token || '')
         : (APP_CONFIG.apiToken || ''),
-      teamLabel: saved.teamLabel || 'Pasukan Teknikal ICT Daerah Selangau',
+      teamLabel: saved.teamLabel || 'Pasukan Teknikal ICT Sekolah Daerah Selangau',
       officialEmail: saved.officialEmail || APP_CONFIG.officialEmail || ''
     };
   }
@@ -74,7 +74,7 @@
       current.token !== String(next.token || '').trim();
     next.url = String(next.url || '').trim();
     next.token = String(next.token || '').trim();
-    next.teamLabel = String(next.teamLabel || 'Pasukan Teknikal ICT Daerah Selangau').trim();
+    next.teamLabel = String(next.teamLabel || 'Pasukan Teknikal ICT Sekolah Daerah Selangau').trim();
     next.officialEmail = String(next.officialEmail || '').trim();
     writeJSON(CFG_KEY, next);
     if (connectionChanged) {

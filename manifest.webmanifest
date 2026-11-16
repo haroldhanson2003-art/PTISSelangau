@@ -1,7 +1,7 @@
 {
-  "name": "PTIS · Pasukan Teknikal ICT Daerah Selangau",
+  "name": "PTIS · Pasukan Teknikal ICT Sekolah Daerah Selangau",
   "short_name": "PTIS",
-  "description": "Sistem pengurusan Pasukan Teknikal ICT Daerah Selangau: pergerakan, kunjung bantu, SCST, peralatan ICT, organisasi dan maklumat pasukan.",
+  "description": "Sistem pengurusan Pasukan Teknikal ICT Sekolah Daerah Selangau: pergerakan, kunjung bantu, SCST, peralatan ICT, organisasi dan maklumat pasukan.",
   "id": "./",
   "start_url": "./index.html",
   "scope": "./",
