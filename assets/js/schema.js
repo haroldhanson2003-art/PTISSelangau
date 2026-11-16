@@ -53,7 +53,8 @@
         { key: 'lokasi', label: 'Lokasi', type: 'text', placeholder: 'Contoh: Makmal Komputer 1' },
         { key: 'tujuan', label: 'Tujuan', type: 'textarea', wide: true, placeholder: 'Tujuan pergerakan...' },
         { key: 'status', label: 'Status', type: 'select', required: true, options: ['Dirancang', 'Sedang Berjalan', 'Selesai', 'Ditangguhkan'] },
-        { key: 'catatan', label: 'Catatan', type: 'textarea', wide: true }
+        { key: 'catatan', label: 'Catatan', type: 'textarea', wide: true },
+        { key: 'lampiran', label: 'Lampiran Surat Rasmi', type: 'file', wide: true, accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif' }
       ]
     },
 
@@ -81,7 +82,7 @@
         { key: 'dapatan', label: 'Dapatan / Penemuan', type: 'textarea', wide: true, required: true },
         { key: 'cadangan', label: 'Cadangan Penambahbaikan', type: 'textarea', wide: true },
         { key: 'status', label: 'Status Laporan', type: 'select', required: true, options: ['Draf', 'Dihantar', 'Disemak', 'Disahkan'] },
-        { key: 'lampiran', label: 'Pautan Lampiran (Drive)', type: 'url', wide: true, placeholder: 'https://drive.google.com/...' }
+        { key: 'lampiran', label: 'Lampiran Surat Rasmi', type: 'file', wide: true, accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif' }
       ]
     },
 

@@ -23,7 +23,7 @@ const TIMEZONE = Session.getScriptTimeZone();
 const SHEETS = {
   Pergerakan: [
     'id', 'tarikh', 'masa', 'sekolah', 'kodSekolah', 'daerah', 'jenisPergerakan',
-    'anggota', 'lokasi', 'tujuan', 'status', 'catatan', 'createdAt', 'updatedAt'
+    'anggota', 'lokasi', 'tujuan', 'status', 'catatan', 'lampiran', 'createdAt', 'updatedAt'
   ],
   KunjungBantu: [
     'id', 'tarikh', 'sekolah', 'daerah', 'pengetua', 'anggota', 'tujuan',
@@ -49,6 +49,18 @@ const SHEETS = {
 };
 
 const NUMBER_FIELDS = ['urutan', 'bilangan', 'duration'];
+
+const UPLOAD_FOLDER = 'PTIS Lampiran';
+const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+const UPLOAD_MIME = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif'
+];
 
 /* =====================================================================
  * Titik masuk Web App
@@ -141,6 +153,10 @@ function handleRequest(req) {
         deleteRecord_(name, id);
         return jsonResponse_({ ok: true, data: { id: id, deleted: true } });
       });
+    }
+
+    if (action === 'upload') {
+      return jsonResponse_({ ok: true, data: uploadFile_(req) });
     }
 
     throw new Error('Tindakan tidak dikenali: ' + action);
@@ -330,6 +346,29 @@ function deleteRecord_(name, id) {
 /* =====================================================================
  * Utiliti
  * ===================================================================== */
+
+function uploadFile_(req) {
+  const mime = String(req.mime || '');
+  if (UPLOAD_MIME.indexOf(mime) < 0) {
+    throw new Error('Jenis fail tidak disokong. Gunakan PDF, Word atau gambar.');
+  }
+  const data = String(req.data || '');
+  if (!data) throw new Error('Fail kosong.');
+  const bytes = Utilities.base64Decode(data);
+  if (!bytes.length) throw new Error('Fail kosong.');
+  if (bytes.length > UPLOAD_MAX_BYTES) throw new Error('Saiz fail melebihi 10 MB.');
+
+  const name = String(req.name || 'lampiran').replace(/[\\\/:*?"<>|]/g, '_').slice(0, 200);
+  const file = getUploadFolder_().createFile(Utilities.newBlob(bytes, mime, name));
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return { id: file.getId(), name: name, mime: mime, size: bytes.length, url: file.getUrl() };
+}
+
+function getUploadFolder_() {
+  const folders = DriveApp.getFoldersByName(UPLOAD_FOLDER);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(UPLOAD_FOLDER);
+}
 
 function getSheet_(name) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();

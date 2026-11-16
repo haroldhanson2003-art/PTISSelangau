@@ -28,7 +28,7 @@ Connect PTIS to Google Sheets via Apps Script. The backend uses a simple Web App
 ## 3) Sheets & headers
 | Sheet | Headers |
 |---|---|
-| Pergerakan | `id, tarikh, masa, sekolah, kodSekolah, daerah, jenisPergerakan, anggota, lokasi, tujuan, status, catatan, createdAt, updatedAt` |
+| Pergerakan | `id, tarikh, masa, sekolah, kodSekolah, daerah, jenisPergerakan, anggota, lokasi, tujuan, status, catatan, lampiran, createdAt, updatedAt` |
 | KunjungBantu | `id, tarikh, sekolah, daerah, pengetua, anggota, tujuan, dapatan, cadangan, status, lampiran, createdAt, updatedAt` |
 | Peralatan | `id, sekolah, kodSekolah, daerah, fasa, jenisPeralatan, jenama, model, bilangan, noSiri, tarikhPerolehan, keadaan, lokasi, vendor, catatan, createdAt, updatedAt` |
 | Kontrak | `id, kategori, fasa, scope, vendor, contractNo, start, end, duration, status, coverage, createdAt, updatedAt` |
@@ -36,7 +36,9 @@ Connect PTIS to Google Sheets via Apps Script. The backend uses a simple Web App
 | Pasukan | `id, nama, noKadPengenalan, jawatan, bidang, sekolah, kodSekolah, daerah, noTelefon, emel, alamat, tarikhLantikan, status, catatan, createdAt, updatedAt` |
 
 - Number fields: `urutan`, `bilangan`, `duration`
-- API actions: `ping`, `setup`, `bootstrap`, `list`, `create`, `update`, `delete`
+- API actions: `ping`, `setup`, `bootstrap`, `list`, `create`, `update`, `delete`, `upload`
+- `lampiran` (Pergerakan & KunjungBantu) stores a JSON list of attached files (`id, name, url, mime, size`). Files are saved to the Google Drive folder **PTIS Lampiran** (PDF, Word, JPG/PNG/WebP/GIF, max 10 MB each). Files are shared as "Anyone with the link can view".
+- After updating `Code.gs`, re-authorise the script when prompted (it now needs Google Drive access) and deploy a new version.
 - `SCST` is link-based in the app (no sheet)
 
 ## 4) Troubleshooting

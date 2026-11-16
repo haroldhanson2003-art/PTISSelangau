@@ -304,11 +304,11 @@
 
   /* -------------------------------------------------------------- remote */
 
-  async function callRemote(payload) {
+  async function callRemote(payload, timeoutMs) {
     const cfg = getConfig();
     if (!cfg.url) throw new Error('URL Google Apps Script belum ditetapkan.');
     const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, APP_CONFIG.requestTimeout || 25000);
+    const timer = setTimeout(function () { controller.abort(); }, timeoutMs || APP_CONFIG.requestTimeout || 25000);
     try {
       const res = await fetch(cfg.url, {
         method: 'POST',
@@ -342,6 +342,18 @@
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  function readFileBase64(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        const result = String(reader.result || '');
+        resolve(result.slice(result.indexOf(',') + 1));
+      };
+      reader.onerror = function () { reject(new Error('Fail tidak dapat dibaca.')); };
+      reader.readAsDataURL(file);
+    });
   }
 
   function saveCache(sheet, rows) {
@@ -515,6 +527,12 @@
       status.offline = false;
       status.lastSync = new Date().toISOString();
       return savedRecord;
+    },
+
+    async uploadFile(file) {
+      if (!isRemote()) throw new Error('Lampiran hanya boleh dimuat naik apabila disambungkan ke Google Sheets.');
+      const data = await readFileBase64(file);
+      return callRemote({ action: 'upload', name: file.name, mime: file.type, data: data }, 120000);
     },
 
     async remove(moduleKey, id) {

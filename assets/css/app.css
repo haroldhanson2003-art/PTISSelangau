@@ -967,6 +967,14 @@ main {
 }
 .field-error { font-size: 10.8px; color: #f0a8a9; margin-top: 4px; }
 .field .hint { font-size: 10.8px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
+.file-list { display: grid; gap: 6px; margin-bottom: 8px; }
+.file-item { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.03); min-width: 0; }
+.file-item.is-pending { border-style: dashed; }
+.file-name { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-meta { font-size: 10.8px; color: var(--muted); white-space: nowrap; }
+.file-empty { font-size: 12px; margin: 0 0 6px; }
+.file-pick { cursor: pointer; }
+.attach-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .form-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 18px; }
 .form-actions--wrap { margin-top: 14px; }
 .divider { height: 1px; background: var(--line); margin: 18px 0; }

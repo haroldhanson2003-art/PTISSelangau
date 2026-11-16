@@ -1119,6 +1119,7 @@
     const v = row[field.key];
     if (v === undefined || v === null || v === '') return '<span class="muted">—</span>';
     if (field.key === 'status' || field.key === 'keadaan') return UI.badge(v);
+    if (field.type === 'file') return attachmentsDetail(v);
     if (field.type === 'date') return UI.fmtDate(v, 'long');
     if (field.type === 'email') return '<a href="mailto:' + UI.esc(v) + '">' + UI.esc(v) + '</a>';
     if (field.type === 'tel') {
@@ -1137,6 +1138,48 @@
   }
 
   /* ================================================================ form */
+
+  const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+  const ATTACHMENT_EXT = /\.(pdf|docx?|jpe?g|png|webp|gif)$/i;
+
+  function parseAttachments(value) {
+    if (Array.isArray(value)) return value.filter(function (a) { return a && a.url; });
+    const s = String(value || '').trim();
+    if (!s) return [];
+    if (s.charAt(0) === '[') {
+      try {
+        const list = JSON.parse(s);
+        return Array.isArray(list) ? list.filter(function (a) { return a && a.url; }) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    if (/^https?:\/\//i.test(s)) return [{ name: 'Pautan lampiran', url: s }];
+    return [];
+  }
+
+  function attachmentsDetail(value) {
+    const items = parseAttachments(value);
+    if (!items.length) return '<span class="muted">—</span>';
+    return '<ul class="attach-list">' + items.map(function (a) {
+      const href = UI.safeHref(a.url);
+      return '<li>' + (href
+        ? '<a href="' + UI.esc(href) + '" target="_blank" rel="noopener noreferrer">' + UI.esc(a.name || 'Lampiran') + '</a>'
+        : UI.esc(a.name || 'Lampiran')) + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function formatBytes(n) {
+    if (!n) return '';
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+    return Math.max(1, Math.round(n / 1024)) + ' KB';
+  }
+
+  function attachmentError(file) {
+    if (!ATTACHMENT_EXT.test(file.name || '')) return 'Jenis fail "' + file.name + '" tidak disokong. Gunakan PDF, Word atau gambar.';
+    if (file.size > ATTACHMENT_MAX_BYTES) return 'Fail "' + file.name + '" melebihi 10 MB.';
+    return '';
+  }
 
   function defaultsFor(mod) {
     const out = {};
@@ -1192,7 +1235,13 @@
     let control = '';
     let extra = '';
 
-    if (f.type === 'textarea') {
+    if (f.type === 'file') {
+      control = '<div class="file-list" data-file-list="' + f.key + '"></div>' +
+        '<label class="btn btn-ghost btn-sm file-pick">' + UI.icon('upload') + 'Tambah fail' +
+        '<input class="sr-only" id="' + id + '" type="file" data-file-input="' + f.key + '" accept="' + UI.esc(f.accept || '') + '" multiple>' +
+        '</label>' +
+        '<p class="hint">PDF, Word atau gambar. Maks 10 MB setiap fail.</p>';
+    } else if (f.type === 'textarea') {
       control = '<textarea id="' + id + '" name="' + f.key + '" rows="3" placeholder="' +
         UI.esc(f.placeholder || '') + '"' + req + '>' + UI.esc(value) + '</textarea>';
     } else if (f.type === 'select') {
@@ -1250,6 +1299,11 @@
       return;
     }
     const row = existing || defaultsFor(mod);
+    const fileFields = mod.fields.filter(function (f) { return f.type === 'file'; });
+    const files = {};
+    fileFields.forEach(function (f) {
+      files[f.key] = parseAttachments(row[f.key]).map(function (a) { return Object.assign({}, a); });
+    });
     const content =
       '<form id="recordForm" novalidate>' +
         '<div class="form-grid">' + mod.fields.map(function (f) { return fieldMarkup(f, row[f.key]); }).join('') + '</div>' +
@@ -1269,6 +1323,47 @@
       onMount: function (root) {
         const form = root.querySelector('#recordForm');
         const saveBtn = root.querySelector('#saveBtn');
+
+        const renderFiles = function () {
+          fileFields.forEach(function (f) {
+            const list = form.querySelector('[data-file-list="' + f.key + '"]');
+            if (!list) return;
+            const items = files[f.key];
+            list.innerHTML = items.length ? items.map(function (a, i) {
+              const href = UI.safeHref(a.url);
+              return '<div class="file-item' + (a.pending ? ' is-pending' : '') + '">' +
+                '<span class="file-name">' + UI.esc(a.name) + '</span>' +
+                '<span class="file-meta">' + (a.pending ? 'Belum dimuat naik' : UI.esc(formatBytes(a.size))) + '</span>' +
+                (href ? '<a class="icon-btn icon-btn--sm" href="' + UI.esc(href) + '" target="_blank" rel="noopener noreferrer" aria-label="Buka ' + UI.esc(a.name) + '">' + UI.icon('external') + '</a>' : '') +
+                '<button class="icon-btn icon-btn--sm" type="button" data-file-remove="' + f.key + '" data-index="' + i + '" aria-label="Buang ' + UI.esc(a.name) + '">' + UI.icon('x') + '</button>' +
+                '</div>';
+            }).join('') : '<p class="muted file-empty">Tiada lampiran.</p>';
+          });
+        };
+        renderFiles();
+
+        form.addEventListener('change', function (event) {
+          const input = event.target;
+          const key = input && input.dataset ? input.dataset.fileInput : '';
+          if (!key) return;
+          Array.from(input.files || []).forEach(function (file) {
+            const error = attachmentError(file);
+            if (error) {
+              UI.toast(error, 'error', 5200);
+              return;
+            }
+            files[key].push({ name: file.name, size: file.size, mime: file.type, file: file, pending: true });
+          });
+          input.value = '';
+          renderFiles();
+        });
+
+        form.addEventListener('click', function (event) {
+          const btn = event.target.closest('[data-file-remove]');
+          if (!btn) return;
+          files[btn.dataset.fileRemove].splice(Number(btn.dataset.index), 1);
+          renderFiles();
+        });
 
         form.addEventListener('submit', async function (event) {
           event.preventDefault();
@@ -1303,8 +1398,29 @@
             return;
           }
 
-          UI.setBusy(saveBtn, true, id ? 'Menyimpan...' : 'Menyimpan...');
+          const pendingFiles = [];
+          fileFields.forEach(function (f) {
+            files[f.key].forEach(function (a) { if (a.pending) pendingFiles.push(a); });
+          });
+
+          UI.setBusy(saveBtn, true, pendingFiles.length ? 'Memuat naik...' : 'Menyimpan...');
           try {
+            for (const a of pendingFiles) {
+              const uploaded = await Store.uploadFile(a.file);
+              a.id = uploaded.id;
+              a.name = uploaded.name;
+              a.url = uploaded.url;
+              a.mime = uploaded.mime;
+              a.size = uploaded.size;
+              a.pending = false;
+              delete a.file;
+            }
+            fileFields.forEach(function (f) {
+              data[f.key] = JSON.stringify(files[f.key].map(function (a) {
+                return { id: a.id || '', name: a.name, url: a.url, mime: a.mime || '', size: a.size || 0 };
+              }));
+            });
+
             let saved;
             if (id) saved = await Store.update(key, id, data);
             else saved = await Store.create(key, data);
