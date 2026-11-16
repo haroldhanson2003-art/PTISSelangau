@@ -155,7 +155,8 @@
         { key: 'end', label: 'Tarikh Tamat', type: 'text', placeholder: 'Contoh: 2029 atau 2029-12-31' },
         { key: 'duration', label: 'Tempoh (Bulan)', type: 'number', min: 1, placeholder: '60' },
         { key: 'status', label: 'Status', type: 'select', required: true, options: ['Aktif', 'Aktif / Pelaksanaan', 'Tamat'] },
-        { key: 'coverage', label: 'Liputan / Catatan (Selangau)', type: 'textarea', wide: true }
+        { key: 'coverage', label: 'Liputan / Catatan (Selangau)', type: 'textarea', wide: true },
+        { key: 'lampiran', label: 'Lampiran Dokumen Kontrak', type: 'file', wide: true, accept: '.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif' }
       ]
     },
 

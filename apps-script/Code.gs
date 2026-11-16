@@ -35,7 +35,7 @@ const SHEETS = {
   ],
   Kontrak: [
     'id', 'kategori', 'fasa', 'scope', 'vendor', 'contractNo', 'start', 'end', 'duration',
-    'status', 'coverage', 'createdAt', 'updatedAt'
+    'status', 'coverage', 'lampiran', 'createdAt', 'updatedAt'
   ],
   Organisasi: [
     'id', 'nama', 'jawatan', 'sekolah', 'daerah', 'noTelefon', 'emel', 'urutan',
