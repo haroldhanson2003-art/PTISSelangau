@@ -9,6 +9,7 @@ const ASSET_VERSION = VERSION.replace('ptis-v', '');
 const CORE = [
   './',
   './index.html',
+  './login.html',
   './manifest.webmanifest',
   './assets/css/app.css?v=' + ASSET_VERSION,
   './assets/js/config.js?v=' + ASSET_VERSION,
