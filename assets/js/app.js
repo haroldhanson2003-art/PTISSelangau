@@ -2191,7 +2191,12 @@ Saya yang menjalankan amanah,
     }
     const lines = [mod.fields.map(function (f) { return csvCell(f.label); }).join(',')];
     rows.forEach(function (r) {
-      lines.push(mod.fields.map(function (f) { return csvCell(r[f.key]); }).join(','));
+      lines.push(mod.fields.map(function (f) {
+        if (f.type === 'file') {
+          return csvCell(parseAttachments(r[f.key]).map(function (a) { return a.name + ' ' + a.url; }).join('; '));
+        }
+        return csvCell(r[f.key]);
+      }).join(','));
     });
     const content = '\uFEFF' + lines.join('\r\n');
     UI.download('PTIS-' + mod.short.replace(/\s+/g, '-') + '-' + UI.todayISO() + '.csv', content, 'text/csv;charset=utf-8');
