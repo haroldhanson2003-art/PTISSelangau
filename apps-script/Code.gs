@@ -18,7 +18,7 @@
  */
 
 const TOKEN = ''; // Pilihan: frasa rahsia panjang, contoh: 'ptis-2026-...'
-const GOOGLE_CLIENT_ID = ''; // OAuth Client ID (Web application). Kosong = log masuk dimatikan.
+const GOOGLE_CLIENT_ID = '770091761834-tm0gtjmn5g3ol6tpcrth18cuv7hfbo3q.apps.googleusercontent.com'; // OAuth Client ID (Web application). Kosong = log masuk dimatikan.
 const ALLOWED_DOMAINS = ['moe.gov.my', 'moe-dl.edu.my']; // Mesti sama dengan allowedDomains dalam config.js
 const TIMEZONE = Session.getScriptTimeZone();
 

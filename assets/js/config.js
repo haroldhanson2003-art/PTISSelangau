@@ -20,7 +20,7 @@ window.APP_CONFIG = {
   // clientId mesti sama dengan GOOGLE_CLIENT_ID dalam apps-script/Code.gs
   // allowedDomains mesti sama dengan ALLOWED_DOMAINS dalam apps-script/Code.gs
   auth: {
-    clientId: '',
+    clientId: '770091761834-tm0gtjmn5g3ol6tpcrth18cuv7hfbo3q.apps.googleusercontent.com',
     allowedDomains: ['moe.gov.my', 'moe-dl.edu.my']
   },
 
