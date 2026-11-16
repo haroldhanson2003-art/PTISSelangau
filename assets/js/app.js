@@ -35,12 +35,7 @@
 
   function init() {
     if (Auth.required() && Store.isRemote() && !Auth.getSession()) {
-      Auth.showGate({
-        onDemo: function () {
-          Store.saveConfig({ url: '' });
-          location.reload();
-        }
-      });
+      Auth.requireSignIn();
       return;
     }
     document.getElementById('year').textContent = new Date().getFullYear();

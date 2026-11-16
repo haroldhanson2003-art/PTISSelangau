@@ -2,11 +2,13 @@
    PTIS · Pengesahan (Log masuk Google)
    Aktif apabila APP_CONFIG.auth.clientId diisi. Pelayan (Code.gs) juga
    mengesahkan token setiap permintaan menggunakan GOOGLE_CLIENT_ID yang sama.
+   Skrin log masuk ialah halaman berasingan (login.html).
    ========================================================================== */
 (function () {
   'use strict';
 
   const SESSION_KEY = 'ptis.auth.v1';
+  const CACHE_PREFIX = 'ptis.cache.v1.';
   const GIS_SRC = 'https://accounts.google.com/gsi/client';
   let gisPromise = null;
 
@@ -65,6 +67,18 @@
     return Boolean(getConfig().clientId);
   }
 
+  function clearCache() {
+    Object.keys(localStorage).forEach(function (key) {
+      if (key.indexOf(CACHE_PREFIX) === 0) localStorage.removeItem(key);
+    });
+  }
+
+  // Dipanggil oleh index.html apabila log masuk diperlukan: buang cache tempatan, kemudian ke halaman log masuk.
+  function requireSignIn() {
+    clearCache();
+    location.replace('login.html');
+  }
+
   function loadGis() {
     if (window.google && google.accounts && google.accounts.id) return Promise.resolve();
     if (!gisPromise) {
@@ -103,29 +117,17 @@
       name: payload.name || '',
       exp: payload.exp
     }));
-    location.reload();
+    location.replace('index.html');
   }
 
-  function showGate(options) {
+  // Dipanggil oleh login.html sahaja.
+  function renderLogin(options) {
     const cfg = getConfig();
-    if (document.getElementById('authGate')) return;
-    const gate = document.createElement('div');
-    gate.id = 'authGate';
-    gate.className = 'auth-gate';
-    gate.innerHTML =
-      '<div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">' +
-        '<span class="eyebrow">PTIS</span>' +
-        '<h1 id="authTitle">Log masuk</h1>' +
-        '<p>Gunakan akaun rasmi (' + cfg.allowedDomains.join(', ') + ') untuk mengakses data pasukan.</p>' +
-        '<div id="authButton" class="auth-button"></div>' +
-        '<p id="authError" class="auth-error" role="alert" hidden></p>' +
-        '<button type="button" class="btn btn-ghost" id="authDemo">Teruskan dalam Mod Demo</button>' +
-      '</div>';
-    document.body.appendChild(gate);
+    const domains = document.getElementById('authDomains');
+    if (domains) domains.textContent = cfg.allowedDomains.join(', ');
 
-    document.getElementById('authDemo').addEventListener('click', function () {
-      if (options && options.onDemo) options.onDemo();
-    });
+    const demo = document.getElementById('authDemo');
+    if (demo && options && options.onDemo) demo.addEventListener('click', options.onDemo);
 
     loadGis().then(function () {
       google.accounts.id.initialize({
@@ -147,8 +149,9 @@
 
   function signOut() {
     sessionStorage.removeItem(SESSION_KEY);
+    clearCache();
     if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
-    location.reload();
+    location.replace('login.html');
   }
 
   window.Auth = {
@@ -162,13 +165,13 @@
     initials: initials,
     domainOf: domainOf,
     isAllowedEmail: isAllowedEmail,
-    loadGis: loadGis,
-    showGate: showGate,
-    signOut: signOut,
     decodeJwt: decodeJwt,
+    requireSignIn: requireSignIn,
+    renderLogin: renderLogin,
+    signOut: signOut,
     handleAuthError: function () {
       sessionStorage.removeItem(SESSION_KEY);
-      location.reload();
+      requireSignIn();
     }
   };
 })();
