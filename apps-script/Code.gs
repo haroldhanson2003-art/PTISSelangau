@@ -21,6 +21,7 @@ const TOKEN = ''; // Pilihan: frasa rahsia panjang, contoh: 'ptis-2026-...'
 const GOOGLE_CLIENT_ID = '770091761834-tm0gtjmn5g3ol6tpcrth18cuv7hfbo3q.apps.googleusercontent.com'; // OAuth Client ID (Web application). Kosong = log masuk dimatikan.
 const ALLOWED_DOMAINS = ['moe.gov.my', 'moe-dl.edu.my']; // Mesti sama dengan allowedDomains dalam config.js
 const TIMEZONE = Session.getScriptTimeZone();
+const AUTH_ENFORCED = true; // Set kepada false untuk mematikan pengesahan pelayan (sementara).
 
 const SHEETS = {
   Pergerakan: [
@@ -98,7 +99,7 @@ function handleRequest(req) {
       return jsonResponse_({ ok: false, code: 'TOKEN_INVALID', error: 'Token API tidak sah. Semak Tetapan aplikasi.' });
     }
 
-    if (action !== 'ping') verifyUser_(req.session);
+    if (AUTH_ENFORCED && action !== 'ping') verifyUser_(req.session);
 
     if (action === 'ping') {
       return jsonResponse_({
