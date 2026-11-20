@@ -48,9 +48,9 @@
 
   function readSession() {
     try {
-      const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+      const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
       if (!s || !s.token || !s.exp || s.exp * 1000 - 60000 < Date.now()) {
-        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(SESSION_KEY);
         return null;
       }
       return s;
@@ -111,7 +111,7 @@
         getConfig().allowedDomains.join(', ') + ').');
       return;
     }
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
       token: response.credential,
       email: payload.email,
       name: payload.name || '',
@@ -150,7 +150,7 @@
   }
 
   function signOut() {
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
     clearCache();
     if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
     location.replace('login.html');
@@ -172,7 +172,7 @@
     renderLogin: renderLogin,
     signOut: signOut,
     handleAuthError: function () {
-      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(SESSION_KEY);
       requireSignIn();
     }
   };
