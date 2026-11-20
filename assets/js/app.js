@@ -378,7 +378,7 @@
         '</section>') +
 
       '<section class="kpi-grid" aria-label="Ringkasan data">' +
-        kpiCard('Jumlah Rekod', total, 'Semua modul data', 'grid', 'blue') +
+        kpiCard('Jumlah Rekod', (all.peralatan || []).length, 'Rekod Peralatan', 'grid', 'blue') +
         kpiCard('Pergerakan Bulan Ini', thisMonth, monthName(), 'route', 'teal') +
         kpiCard('Kunjung Bantu Disahkan', kunjungDisahkan, 'Daripada ' + (all.kunjungBantu || []).length + ' laporan', 'clipboard', 'green') +
         kpiCard('Anggota Aktif', aktif, (all.pasukan || []).length + ' anggota berdaftar', 'users', 'gold') +
