@@ -40,6 +40,32 @@
   let installPrompt = null;
   const searchTimers = {};
 
+  /* ------------------------------------------------------- peranan & akses */
+
+  function canSeePersonal() {
+    return Store && Store.canSeePersonal ? Store.canSeePersonal() : true;
+  }
+
+  function canWrite() {
+    return Store && Store.canWrite ? Store.canWrite() : true;
+  }
+
+  function visibleFields(mod) {
+    return mod.fields.filter(function (f) { return !f.personal || canSeePersonal(); });
+  }
+
+  function visibleCols(mod) {
+    return mod.listCols.filter(function (key) {
+      const f = mod.fields.find(function (x) { return x.key === key; });
+      return !f || !f.personal || canSeePersonal();
+    });
+  }
+
+  function roleLabel() {
+    const role = Store && Store.role ? Store.role() : 'admin';
+    return role === 'admin' ? 'Pentadbir' : role === 'viewer' ? 'Baca sahaja' : 'Ahli';
+  }
+
   /* ================================================================ boot */
 
   function init() {
@@ -51,6 +77,20 @@
     bindGlobal();
     updateModeUI();
     startApp();
+    refreshRole();
+  }
+
+  // Peranan ditentukan oleh pelayan. Cache setempat memberi paparan segera;
+  // jika pelayan melaporkan peranan berbeza, paparan dilukis semula.
+  function refreshRole() {
+    if (!Store || !Store.refreshRole) return;
+    const before = Store.role ? Store.role() : 'ahli';
+    Store.refreshRole().then(function (role) {
+      if (role !== before && started && state.all) {
+        renderNav();
+        renderCurrent();
+      }
+    }).catch(function () { /* luar talian: guna cache peranan */ });
   }
 
   let started = false;
@@ -234,6 +274,7 @@
     const parts = raw.split('/').filter(Boolean);
     if (!parts.length) return { name: 'home' };
     if (parts[0] === 'm' && parts[1] && MODULES[parts[1]]) return { name: 'module', key: parts[1] };
+    if (parts[0] === 's' && parts[1]) return { name: 'school', kod: decodeURIComponent(parts[1]) };
     if (parts[0] === 'panduan') return { name: 'guide' };
     if (parts[0] === 'tetapan') return { name: 'settings' };
     return { name: 'home' };
@@ -269,6 +310,7 @@
     if (token !== state.loadToken) return;
 
     if (r.name === 'home') renderHome();
+    else if (r.name === 'school') renderSchool(r.kod);
     else renderModule(r.key);
   }
 
@@ -276,6 +318,7 @@
     const r = state.route || parseHash();
     if (r.name === 'settings') renderSettings();
     else if (r.name === 'guide') renderGuide();
+    else if (r.name === 'school') renderSchool(r.kod);
     else if (r.name === 'module') renderModule(r.key);
     else renderHome();
   }
@@ -285,7 +328,12 @@
     const title = document.getElementById('pageTitle');
     let c = 'Utama';
     let t = 'Papan Pemuka';
-    if (r.name === 'module') {
+    if (r.name === 'school') {
+      const school = findSchool(r.kod);
+      c = 'Sekolah';
+      t = school ? school.namaSekolah : r.kod;
+      document.title = t + ' · PTIS';
+    } else if (r.name === 'module') {
       const mod = MODULES[r.key];
       c = 'Modul';
       t = mod.navTitle;
@@ -551,7 +599,10 @@
       return '<article class="card scst-school-item" data-kod="' + UI.esc(kod) + '">' +
         '<div class="scst-school-row">' +
           '<div class="scst-school-info"><h4>' + UI.esc(nama) + '</h4><span class="scst-code">' + UI.esc(kod) + ' / SCST</span></div>' +
-          '<a class="btn btn-primary btn-sm scst-open" href="' + UI.esc(open) + '" target="_blank" rel="noopener noreferrer" data-kod="' + UI.esc(kod) + '">' + UI.icon('external') + 'Buka SCST</a>' +
+          '<div class="scst-actions">' +
+            '<a class="btn btn-ghost btn-sm" href="#/s/' + encodeURIComponent(kod) + '">' + UI.icon('home') + 'Profil</a>' +
+            '<a class="btn btn-primary btn-sm scst-open" href="' + UI.esc(open) + '" target="_blank" rel="noopener noreferrer" data-kod="' + UI.esc(kod) + '">' + UI.icon('external') + 'Buka SCST</a>' +
+          '</div>' +
         '</div>' +
       '</article>';
     }).join('') : '<div class="empty-state">' + UI.icon('search') + '<h3>Tiada sekolah sepadan</h3><p>Cuba carian menggunakan nama atau kod sekolah yang lain.</p><button class="btn btn-ghost" type="button" id="scstClearSearch">Kosongkan carian</button></div>';
@@ -657,7 +708,7 @@
         '</div>' +
         '<div class="page-head-actions">' +
           '<button class="btn btn-ghost" data-action="export" data-key="' + key + '">' + UI.icon('download') + '<span class="hide-sm">Eksport CSV</span></button>' +
-          '<button class="btn btn-primary" data-action="new" data-key="' + key + '">' + UI.icon('plus') + 'Rekod Baharu</button>' +
+          (canWrite() ? '<button class="btn btn-primary" data-action="new" data-key="' + key + '">' + UI.icon('plus') + 'Rekod Baharu</button>' : '') +
         '</div>' +
       '</section>' +
 
@@ -753,6 +804,7 @@
               '<span class="peralatan-school-types">' + schoolSummary.typeEntries.map(function (e) { return e[1] + ' ' + UI.esc(e[0]); }).join(' · ') + '</span>' +
             '</div>' +
           '</button>' +
+          '<div class="peralatan-school-tools"><a class="peralatan-school-link" href="#/s/' + encodeURIComponent(kod || school) + '">' + UI.icon('home') + 'Profil sekolah</a></div>' +
           '<div class="peralatan-school-items"' + (isOpen ? '' : ' hidden') + '>' +
             schoolRows.map(function (r) {
               return '<article class="peralatan-item" data-row data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" tabindex="0">' +
@@ -763,7 +815,7 @@
                     '<span class="peralatan-item-qty">' + peralatanQty(r) + ' unit</span>' +
                   '</div>' +
                   '<div class="peralatan-item-right">' + UI.badge(r.keadaan || 'Baik') +
-                    '<button class="icon-btn icon-btn--sm" data-action="edit" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Sunting">' + UI.icon('edit') + '</button>' +
+                    (canWrite() ? '<button class="icon-btn icon-btn--sm" data-action="edit" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Sunting">' + UI.icon('edit') + '</button>' : '') +
                   '</div>' +
                 '</div>' +
                 '<dl class="peralatan-item-dl">' +
@@ -839,10 +891,11 @@
           '<div class="title-row"><span class="page-icon tone-' + mod.tone + '">' + UI.icon(mod.icon) + '</span>' +
           '<div><h2>' + UI.esc(mod.title) + '</h2><p>' + UI.esc(mod.description) + '</p></div></div>' +
           (mod.note ? '<div class="note note--warn">' + UI.icon('alert') + '<span>' + UI.esc(mod.note) + '</span></div>' : '') +
+          (!canSeePersonal() && mod.fields.some(function (f) { return f.personal; }) ? '<div class="note note--info">' + UI.icon('lock') + '<span>Medan peribadi (No. KP, telefon, e-mel, alamat) disembunyikan daripada akaun anda dan tidak dihantar oleh pelayan.</span></div>' : '') +
         '</div>' +
         '<div class="page-head-actions">' +
           '<button class="btn btn-ghost" data-action="export" data-key="' + key + '">' + UI.icon('download') + '<span class="hide-sm">Eksport CSV</span></button>' +
-          '<button class="btn btn-primary" data-action="new" data-key="' + key + '">' + UI.icon('plus') + 'Rekod Baharu</button>' +
+          (canWrite() ? '<button class="btn btn-primary" data-action="new" data-key="' + key + '">' + UI.icon('plus') + 'Rekod Baharu</button>' : '') +
         '</div>' +
       '</section>' +
 
@@ -996,7 +1049,7 @@
   function tableMarkup(mod, rows) {
     return '<div class="table-wrap"><table class="data-table">' +
       '<thead><tr>' +
-      mod.listCols.map(function (col) {
+      visibleCols(mod).map(function (col) {
         const f = mod.fields.find(function (x) { return x.key === col; });
         return '<th>' + UI.esc(f ? f.label : col) + '</th>';
       }).join('') +
@@ -1004,13 +1057,13 @@
       '</tr></thead><tbody>' +
       rows.map(function (r) {
         return '<tr class="row-click" data-row data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" tabindex="0">' +
-          mod.listCols.map(function (col) {
+          visibleCols(mod).map(function (col) {
             const f = mod.fields.find(function (x) { return x.key === col; });
             return '<td>' + cellValue(f || { key: col }, r) + '</td>';
           }).join('') +
           '<td class="cell-actions">' +
             '<button class="icon-btn icon-btn--sm" data-action="detail" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Lihat butiran" title="Lihat">' + UI.icon('search') + '</button>' +
-            '<button class="icon-btn icon-btn--sm" data-action="edit" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Sunting rekod" title="Sunting">' + UI.icon('edit') + '</button>' +
+            (canWrite() ? '<button class="icon-btn icon-btn--sm" data-action="edit" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Sunting rekod" title="Sunting">' + UI.icon('edit') + '</button>' : '') +
           '</td>' +
           '</tr>';
       }).join('') +
@@ -1019,7 +1072,7 @@
 
   function mobileCardsMarkup(mod, rows) {
     return '<div class="record-cards">' + rows.map(function (r) {
-      const cols = mod.listCols.slice(1, 4);
+      const cols = visibleCols(mod).slice(1, 4);
       return '<article class="record-card" data-row data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" tabindex="0">' +
         '<div class="record-top"><span class="record-date">' + UI.icon('calendar') + UI.fmtDate(r[mod.dateKey] || r.createdAt, 'short') + '</span>' +
           (r.status ? UI.badge(r.status) : r.keadaan ? UI.badge(r.keadaan) : '') + '</div>' +
@@ -1034,7 +1087,7 @@
         }).join('') + '</dl>' +
         '<div class="record-actions">' +
           '<button class="btn btn-ghost btn-sm" data-action="detail" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '">Lihat</button>' +
-          '<button class="icon-btn icon-btn--sm" data-action="edit" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Sunting">' + UI.icon('edit') + '</button>' +
+          (canWrite() ? '<button class="icon-btn icon-btn--sm" data-action="edit" data-key="' + mod.key + '" data-id="' + UI.esc(r.id) + '" aria-label="Sunting">' + UI.icon('edit') + '</button>' : '') +
         '</div>' +
         '</article>';
     }).join('') + '</div>';
@@ -1086,12 +1139,199 @@
                   (r.emel ? '<a href="mailto:' + UI.esc(r.emel) + '" aria-label="E-mel ' + UI.esc(r.nama) + '">' + UI.icon('mail') + UI.esc(r.emel) + '</a>' : '') +
                 '</div>' +
               '</div>' +
-              '<button class="icon-btn icon-btn--sm org-edit" data-action="edit" data-key="organisasi" data-id="' + UI.esc(r.id) + '" aria-label="Sunting ' + UI.esc(r.nama) + '">' + UI.icon('edit') + '</button>' +
+              (canWrite() ? '<button class="icon-btn icon-btn--sm org-edit" data-action="edit" data-key="organisasi" data-id="' + UI.esc(r.id) + '" aria-label="Sunting ' + UI.esc(r.nama) + '">' + UI.icon('edit') + '</button>' : '') +
               '</article>';
           }).join('') +
         '</div>' +
       '</section>';
     }).join('') + '</div>';
+  }
+
+  /* ============================================================ sekolah */
+
+  function normSchool(value) {
+    return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  }
+
+  function findSchool(kodOrName) {
+    const key = normSchool(kodOrName);
+    if (!key) return null;
+    return scstSchools().find(function (s) {
+      return normSchool(s.kodSekolah) === key || normSchool(s.namaSekolah) === key;
+    }) || null;
+  }
+
+  function inSchool(row, kod, nama) {
+    if (!row) return false;
+    if (kod && normSchool(row.kodSekolah) === normSchool(kod)) return true;
+    return Boolean(nama) && normSchool(row.sekolah) === normSchool(nama);
+  }
+
+  function statChip(label, value, iconName, tone) {
+    return '<article class="stat-chip">' +
+      '<span class="stat-icon tone-' + tone + '">' + UI.icon(iconName) + '</span>' +
+      '<div><span>' + UI.esc(label) + '</span><strong>' + UI.esc(String(value)) + '</strong></div>' +
+      '</article>';
+  }
+
+  function schoolRowButton(key, row, title, meta, status) {
+    return '<button type="button" class="school-row" data-action="detail" data-key="' + key + '" data-id="' + UI.esc(row.id) + '">' +
+      '<span class="school-row-main"><strong>' + UI.esc(title) + '</strong><small>' + UI.esc(meta || '') + '</small></span>' +
+      (status ? UI.badge(status) : '') +
+      '</button>';
+  }
+
+  // Profil sekolah: satu paparan yang menyatukan modul yang selama ini
+  // berasingan, dicantumkan melalui kod sekolah (atau nama sekolah).
+  function renderSchool(kodOrName) {
+    const all = state.all || {};
+    const known = findSchool(kodOrName);
+    const kod = known ? known.kodSekolah : String(kodOrName || '').toUpperCase();
+    const nama = known ? known.namaSekolah : '';
+
+    const peralatan = (all.peralatan || []).filter(function (r) { return inSchool(r, kod, nama); });
+    const pergerakan = (all.pergerakan || []).filter(function (r) { return inSchool(r, kod, nama); });
+    const kunjung = (all.kunjungBantu || []).filter(function (r) { return inSchool(r, kod, nama); });
+    const pasukan = (all.pasukan || []).filter(function (r) { return inSchool(r, kod, nama); });
+    const organisasi = (all.organisasi || []).filter(function (r) { return inSchool(r, kod, nama); });
+
+    if (!known && !peralatan.length && !pergerakan.length && !kunjung.length && !pasukan.length && !organisasi.length) {
+      view.innerHTML =
+        '<section class="page-head">' +
+          '<div class="page-head-main">' +
+            '<a class="back-link" href="#/">' + UI.icon('chevron') + 'Papan Pemuka</a>' +
+            '<div class="title-row"><span class="page-icon tone-slate">' + UI.icon('home') + '</span>' +
+            '<div><h2>Sekolah tidak dijumpai</h2><p>Tiada rekod untuk <strong>' + UI.esc(kod) + '</strong>.</p></div></div>' +
+          '</div>' +
+        '</section>' +
+        '<div class="empty-state">' + UI.icon('search') + '<h3>Tiada data sekolah</h3>' +
+        '<p>Kod atau nama ini tiada dalam senarai sekolah daerah dan tiada rekod menggunakannya.</p>' +
+        '<a class="btn btn-ghost" href="#/m/scst">Senarai sekolah SCST</a></div>';
+      return;
+    }
+
+    const title = nama || (peralatan[0] && peralatan[0].sekolah) || (pergerakan[0] && pergerakan[0].sekolah) || (kunjung[0] && kunjung[0].sekolah) || String(kodOrName || 'Sekolah');
+    const daerah = (peralatan[0] && peralatan[0].daerah) || (pasukan[0] && pasukan[0].daerah) || 'Selangau';
+    const summary = peralatanSummary(peralatan);
+    const tahun = String(new Date().getFullYear());
+    const tahunMoves = pergerakan.filter(function (r) { return String(r.tarikh || '').slice(0, 4) === tahun; }).length;
+    const disahkan = kunjung.filter(function (r) { return r.status === 'Disahkan'; }).length;
+
+    const fasaList = [];
+    peralatan.forEach(function (r) { if (r.fasa && fasaList.indexOf(r.fasa) < 0) fasaList.push(r.fasa); });
+    const contracts = (all.kontrak && all.kontrak.length ? all.kontrak : (APP_CONFIG.ictContracts || []))
+      .filter(function (c) { return fasaList.indexOf(c.fasa) >= 0; });
+
+    const equipmentRows = peralatan.slice().sort(function (a, b) {
+      const byFasa = String(a.fasa || '').localeCompare(String(b.fasa || ''));
+      if (byFasa !== 0) return byFasa;
+      return String(a.jenisPeralatan || '').localeCompare(String(b.jenisPeralatan || ''));
+    });
+    const shownEquipment = equipmentRows.slice(0, 40);
+    const kunjungRows = kunjung.slice().sort(byDateDesc('tarikh')).slice(0, 6);
+
+    view.innerHTML =
+      '<section class="page-head">' +
+        '<div class="page-head-main">' +
+          '<a class="back-link" href="#/">' + UI.icon('chevron') + 'Papan Pemuka</a>' +
+          '<div class="title-row"><span class="page-icon tone-blue">' + UI.icon('home') + '</span>' +
+            '<div><h2>' + UI.esc(title) + '</h2>' +
+            '<p class="school-head-meta"><span class="badge badge--neutral">' + UI.esc(kod || 'Tanpa kod') + '</span>' +
+            '<span>Daerah ' + UI.esc(daerah) + '</span></p></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="page-head-actions">' +
+          '<a class="btn btn-ghost" href="' + UI.esc(scstDefaultUrl(kod)) + '" target="_blank" rel="noopener noreferrer">' + UI.icon('external') + 'Buka SCST</a>' +
+          (canWrite() ? '<button class="btn btn-primary" data-action="new" data-key="pergerakan">' + UI.icon('plus') + 'Rekod Pergerakan</button>' : '') +
+        '</div>' +
+      '</section>' +
+
+      '<section class="stat-strip">' +
+        statChip('Unit peralatan', summary.totalCount, 'device', 'blue') +
+        statChip('Rekod peralatan', peralatan.length, 'clipboard', 'indigo') +
+        statChip('Pergerakan ' + tahun, tahunMoves, 'route', 'gold') +
+        statChip('Kunjung disahkan', disahkan + ' / ' + kunjung.length, 'check', 'green') +
+      '</section>' +
+
+      '<div class="school-grid">' +
+        '<section class="card list-card">' +
+          '<div class="card-head"><div><span class="eyebrow">Inventori</span><h3>Peralatan ICT</h3></div>' +
+          '<a class="link-more" href="#/m/peralatan">Modul penuh ' + UI.icon('chevron') + '</a></div>' +
+          (peralatan.length
+            ? ('<div class="card-body school-badges">' + summary.typeEntries.map(function (e) {
+                return '<span class="badge badge--neutral">' + e[1] + ' ' + UI.esc(e[0]) + '</span>';
+              }).join('') + '</div>' +
+              '<div class="table-wrap"><table class="data-table"><thead><tr>' +
+              '<th>Jenis</th><th>Jenama / Model</th><th>Unit</th><th>Keadaan</th><th>Lokasi</th>' +
+              '</tr></thead><tbody>' +
+              shownEquipment.map(function (r) {
+                return '<tr class="row-click" data-row data-key="peralatan" data-id="' + UI.esc(r.id) + '" tabindex="0">' +
+                  '<td>' + UI.esc(r.jenisPeralatan || '—') + '</td>' +
+                  '<td>' + UI.esc([r.jenama, r.model].filter(Boolean).join(' · ') || '—') + '</td>' +
+                  '<td>' + peralatanQty(r) + '</td>' +
+                  '<td>' + UI.badge(r.keadaan || 'Baik') + '</td>' +
+                  '<td>' + UI.esc(r.lokasi || '—') + '</td>' +
+                '</tr>';
+              }).join('') +
+              '</tbody></table></div>' +
+              (equipmentRows.length > shownEquipment.length
+                ? '<div class="card-body"><p class="hint">Menunjukkan ' + shownEquipment.length + ' daripada ' + equipmentRows.length + ' rekod. Buka modul untuk senarai penuh.</p></div>'
+                : ''))
+            : '<div class="card-body"><p class="muted">Tiada rekod peralatan untuk sekolah ini.</p></div>') +
+        '</section>' +
+
+        '<section class="card recent-card">' +
+          '<div class="card-head"><div><span class="eyebrow">Aktiviti</span><h3>Pergerakan</h3></div>' +
+          '<a class="link-more" href="#/m/pergerakan">Modul penuh ' + UI.icon('chevron') + '</a></div>' +
+          '<div class="recent-list">' +
+          (pergerakan.length
+            ? recentMarkup(pergerakan)
+            : '<div class="recent-empty">' + UI.icon('route') + '<p>Tiada pergerakan direkod untuk sekolah ini.</p></div>') +
+          '</div>' +
+        '</section>' +
+
+        '<section class="card">' +
+          '<div class="card-head"><div><span class="eyebrow">Pelaporan</span><h3>Kunjung Bantu</h3></div>' +
+          '<a class="link-more" href="#/m/kunjungBantu">Modul penuh ' + UI.icon('chevron') + '</a></div>' +
+          '<div class="card-body"><div class="school-card-list">' +
+          (kunjungRows.length
+            ? kunjungRows.map(function (r) {
+                return schoolRowButton('kunjungBantu', r, UI.fmtDate(r.tarikh), String(r.dapatan || r.tujuan || 'Laporan kunjung bantu').slice(0, 120), r.status);
+              }).join('')
+            : '<p class="muted">Tiada laporan kunjung bantu untuk sekolah ini.</p>') +
+          '</div></div>' +
+        '</section>' +
+
+        '<section class="card">' +
+          '<div class="card-head"><div><span class="eyebrow">Pasukan</span><h3>Anggota & organisasi</h3></div>' +
+          '<a class="link-more" href="#/m/pasukan">Modul penuh ' + UI.icon('chevron') + '</a></div>' +
+          '<div class="card-body"><div class="school-card-list">' +
+          (organisasi.length || pasukan.length
+            ? organisasi.map(function (r) {
+                return schoolRowButton('organisasi', r, r.nama || 'Tanpa nama', r.jawatan || '');
+              }).join('') +
+              pasukan.map(function (r) {
+                const tel = (canSeePersonal() && r.noTelefon) ? ' · ' + r.noTelefon : '';
+                return schoolRowButton('pasukan', r, r.nama || 'Tanpa nama', (r.jawatan || '') + tel, r.status);
+              }).join('')
+            : '<p class="muted">Tiada anggota pasukan atau organisasi direkod untuk sekolah ini.</p>') +
+          '</div></div>' +
+        '</section>' +
+
+        '<section class="card">' +
+          '<div class="card-head"><div><span class="eyebrow">Rujukan</span><h3>Kontrak berkaitan</h3></div>' +
+          '<a class="link-more" href="#/m/kontrak">Modul penuh ' + UI.icon('chevron') + '</a></div>' +
+          '<div class="card-body"><div class="school-card-list">' +
+          (contracts.length
+            ? contracts.map(function (c) {
+                return '<div class="school-row"><span class="school-row-main"><strong>' + UI.esc(c.fasa || '—') + '</strong>' +
+                  '<small>' + UI.esc(c.vendor || '') + ' · Tamat ' + UI.esc(c.end || '—') + '</small></span>' +
+                  UI.badge(c.status || '') + '</div>';
+              }).join('')
+            : '<p class="muted">Tiada kontrak sepadan dengan fasa peralatan sekolah ini.</p>') +
+          '</div></div>' +
+        '</section>' +
+      '</div>';
   }
 
   /* ============================================================== detail */
@@ -1110,7 +1350,7 @@
       mod.fields.find(function (f) { return f.key === 'keadaan'; });
     const statusValue = statusField ? row[statusField.key] : '';
 
-    const body = mod.fields.map(function (f) {
+    const body = visibleFields(mod).map(function (f) {
       return '<div class="detail-field' + (f.wide ? ' detail-field--wide' : '') + '">' +
         '<dt>' + UI.esc(f.label) + '</dt>' +
         '<dd>' + detailValue(f, row) + '</dd>' +
@@ -1136,10 +1376,11 @@
           '</div>' +
         '</div>' +
         '<div class="modal-foot">' +
-          '<button class="btn btn-danger-ghost" data-detail-action="delete">' + UI.icon('trash') + 'Padam</button>' +
+          (canWrite() ? '<button class="btn btn-danger-ghost" data-detail-action="delete">' + UI.icon('trash') + 'Padam</button>' : '<span></span>') +
           '<div class="foot-right">' +
+            ((row.kodSekolah || row.sekolah) ? '<a class="btn btn-ghost" href="#/s/' + encodeURIComponent(row.kodSekolah || row.sekolah) + '">' + UI.icon('home') + 'Profil sekolah</a>' : '') +
             '<button class="btn btn-ghost" data-close="modal">Tutup</button>' +
-            '<button class="btn btn-primary" data-detail-action="edit">' + UI.icon('edit') + 'Sunting Rekod</button>' +
+            (canWrite() ? '<button class="btn btn-primary" data-detail-action="edit">' + UI.icon('edit') + 'Sunting Rekod</button>' : '') +
           '</div>' +
         '</div>' +
       '</div>'
@@ -1329,6 +1570,10 @@
   }
 
   function openForm(key, id) {
+    if (!canWrite()) {
+      UI.toast('Akaun anda hanya boleh membaca data. Hubungi pentadbir untuk akses tulis.', 'error', 5200);
+      return;
+    }
     const mod = MODULES[key];
     const existing = id ? ((state.all && state.all[key]) || []).find(function (r) { return String(r.id) === String(id); }) : null;
     if (id && !existing) {
@@ -1336,14 +1581,14 @@
       return;
     }
     const row = existing || defaultsFor(mod);
-    const fileFields = mod.fields.filter(function (f) { return f.type === 'file'; });
+    const fileFields = visibleFields(mod).filter(function (f) { return f.type === 'file'; });
     const files = {};
     fileFields.forEach(function (f) {
       files[f.key] = parseAttachments(row[f.key]).map(function (a) { return Object.assign({}, a); });
     });
     const content =
       '<form id="recordForm" novalidate>' +
-        '<div class="form-grid">' + mod.fields.map(function (f) { return fieldMarkup(f, row[f.key]); }).join('') + '</div>' +
+        '<div class="form-grid">' + visibleFields(mod).map(function (f) { return fieldMarkup(f, row[f.key]); }).join('') + '</div>' +
       '</form>';
 
     const footer =
@@ -1408,7 +1653,7 @@
           let firstInvalid = null;
           const data = {};
 
-          mod.fields.forEach(function (f) {
+          visibleFields(mod).forEach(function (f) {
             const input = form.elements[f.key];
             const raw = input ? input.value : '';
             const value = raw.trim();
@@ -1938,6 +2183,27 @@ Saya yang menjalankan amanah,
 
   /* ============================================================ settings */
 
+  // Sandaran pelayan (Drive) — pentadbir sahaja.
+  function serverBackupCard() {
+    const admin = !Store.role || Store.role() === 'admin';
+    return '<section class="card">' +
+      '<div class="card-head">' +
+        '<div><span class="eyebrow">Pelayan</span><h3>Sandaran Google Sheets</h3></div>' +
+        '<span class="version-tag">' + (admin ? 'Pentadbir' : 'Baca sahaja') + '</span>' +
+      '</div>' +
+      '<div class="card-body">' +
+        (admin
+          ? '<p class="body-text">Sandaran disimpan sebagai fail JSON dalam folder Drive <strong>PTIS Sandaran</strong>. Pemulihan menulis semula tab data dan membuat sandaran keselamatan secara automatik terlebih dahulu.</p>' +
+            '<div class="form-actions form-actions--wrap">' +
+              '<button class="btn btn-primary" id="backupNowBtn">' + UI.icon('upload') + 'Sandaran ke Drive</button>' +
+              '<button class="btn btn-ghost" id="backupRefreshBtn">' + UI.icon('refresh') + 'Muat semula senarai</button>' +
+            '</div>' +
+            '<div class="backup-list" id="backupList"><p class="hint">Memuatkan senarai sandaran…</p></div>'
+          : '<p class="hint">Hanya pentadbir PTIS boleh membuat atau memulihkan sandaran pangkalan data.</p>') +
+      '</div>' +
+    '</section>';
+  }
+
   function renderSettings() {
     const cfg = Store.getConfig();
     const remote = Store.isRemote();
@@ -1991,19 +2257,24 @@ Saya yang menjalankan amanah,
               '<div><span>Cache terakhir</span><strong id="settingsCacheNewest">' + (cache.newest ? UI.fmtDateTime(cache.newest) : '—') + '</strong></div>' +
               '<div><span>Penyegerakan terakhir</span><strong id="settingsLastSync">' + (Store.status.lastSync ? UI.fmtDateTime(Store.status.lastSync) : '—') + '</strong></div>' +
               (AUTH.getSession() ? '<div><span>Log masuk sebagai</span><strong>' + UI.esc(AUTH.getSession().email) + '</strong></div>' : '') +
+              (remote ? '<div><span>Peranan</span><strong>' + UI.esc(roleLabel()) + '</strong></div>' : '') +
             '</div>' +
             '<div class="form-actions form-actions--wrap">' +
               '<button class="btn btn-ghost" id="backupBtn">' + UI.icon('download') + 'Sandaran JSON</button>' +
-              '<button class="btn btn-ghost" id="importBtn">' + UI.icon('upload') + 'Import JSON</button>' +
+              '<button class="btn btn-ghost" id="importBtn">' + UI.icon('upload') + (remote ? 'Pulihkan fail JSON' : 'Import JSON') + '</button>' +
               '<button class="btn btn-ghost" id="reloadBtn">' + UI.icon('refresh') + 'Muat Semula</button>' +
               (remote ? '' : '<button class="btn btn-danger-ghost" id="resetBtn">' + UI.icon('refresh') + 'Set Semula Demo</button>') +
               (!remote && AUTH.required() ? '<button class="btn btn-ghost" id="connectBtn">' + UI.icon('refresh') + 'Sambung ke Google Sheets</button>' : '') +
               (remote && AUTH.getSession() ? '<button class="btn btn-ghost" id="logoutBtn">' + UI.icon('logout') + 'Log Keluar</button>' : '') +
             '</div>' +
             '<input type="file" id="importFile" accept="application/json,.json" hidden>' +
-            '<p class="hint">Import JSON hanya tersedia dalam mod demo. Untuk Google Sheets, gunakan menu Fail → Import dalam hamparan.</p>' +
+            '<p class="hint">' + (remote
+              ? 'Pemulihan fail JSON menulis semula tab Google Sheets (pentadbir sahaja) selepas sandaran keselamatan automatik.'
+              : 'Import JSON menggantikan data demo pada peranti ini.') + '</p>' +
           '</div>' +
         '</section>' +
+
+        (remote ? serverBackupCard() : '') +
 
         '<section class="card">' +
           '<div class="card-head">' +
@@ -2127,8 +2398,8 @@ Saya yang menjalankan amanah,
     const importFile = document.getElementById('importFile');
     if (importBtn && importFile) {
       importBtn.addEventListener('click', function () {
-        if (Store.isRemote()) {
-          UI.toast('Import JSON hanya untuk mod demo. Gunakan import hamparan Google Sheets.', 'error', 5200);
+        if (Store.isRemote() && Store.role && Store.role() !== 'admin') {
+          UI.toast('Hanya pentadbir boleh memulihkan data daripada fail.', 'error', 5200);
           return;
         }
         importFile.click();
@@ -2136,27 +2407,101 @@ Saya yang menjalankan amanah,
       importFile.addEventListener('change', async function () {
         const file = importFile.files && importFile.files[0];
         if (!file) return;
+        const live = Store.isRemote();
         try {
           const text = await file.text();
           const payload = JSON.parse(text);
           const ok = await UI.confirm({
-            title: 'Import data sandaran?',
-            message: 'Data demo semasa akan diganti dengan kandungan fail ini. Teruskan?',
-            confirmLabel: 'Import',
+            title: live ? 'Pulihkan data daripada fail?' : 'Import data sandaran?',
+            message: live
+              ? 'Semua data Google Sheets akan diganti dengan kandungan fail ini. Sandaran keselamatan dibuat secara automatik sebelum pemulihan.'
+              : 'Data demo semasa akan diganti dengan kandungan fail ini. Teruskan?',
+            confirmLabel: live ? 'Pulihkan' : 'Import',
             danger: true
           });
           if (!ok) return;
-          Store.importDemo(payload);
+          if (live) await Store.restore({ payload: payload });
+          else Store.importDemo(payload);
           state.all = null;
           await ensureAll(true);
-          UI.toast('Data sandaran berjaya diimport.', 'success');
+          UI.toast(live ? 'Data dipulihkan daripada fail.' : 'Data sandaran berjaya diimport.', 'success', 6000);
           renderSettings();
         } catch (err) {
-          UI.toast('Fail tidak sah: ' + (err.message || 'format tidak dikenali.'), 'error', 6000);
+          UI.toast('Pemulihan gagal: ' + (err.message || 'format tidak dikenali.'), 'error', 6500);
         } finally {
           importFile.value = '';
         }
       });
+    }
+
+    /* ---------------------------------------- sandaran & pemulihan Drive */
+
+    const backupNowBtn = document.getElementById('backupNowBtn');
+    if (backupNowBtn) {
+      backupNowBtn.addEventListener('click', async function () {
+        UI.setBusy(backupNowBtn, true, 'Menyandarkan...');
+        try {
+          const result = await Store.backupNow();
+          UI.toast('Sandaran dibuat: ' + (result && result.name ? result.name : 'berjaya'), 'success', 6000);
+          renderSettings();
+        } catch (err) {
+          UI.setBusy(backupNowBtn, false);
+          UI.toast(err.message || 'Sandaran gagal.', 'error', 6500);
+        }
+      });
+    }
+
+    const backupRefreshBtn = document.getElementById('backupRefreshBtn');
+    if (backupRefreshBtn) {
+      backupRefreshBtn.addEventListener('click', function () { renderSettings(); });
+    }
+
+    const backupListEl = document.getElementById('backupList');
+    if (backupListEl) {
+      const loadBackups = async function () {
+        backupListEl.innerHTML = '<p class="hint">Memuatkan senarai sandaran…</p>';
+        try {
+          const list = await Store.listBackups();
+          if (!list || !list.length) {
+            backupListEl.innerHTML = '<p class="hint">Belum ada sandaran pada Drive.</p>';
+            return;
+          }
+          backupListEl.innerHTML = list.map(function (b) {
+            return '<div class="backup-item"><div><strong>' + UI.esc(b.name) + '</strong>' +
+              '<small>' + UI.esc(UI.fmtDateTime(b.at)) + ' · ' + UI.esc(formatBytes(b.size)) + '</small></div>' +
+              '<button class="btn btn-ghost btn-sm" type="button" data-restore-backup="' + UI.esc(b.id) + '" data-restore-name="' + UI.esc(b.name) + '">' + UI.icon('refresh') + 'Pulihkan</button></div>';
+          }).join('');
+        } catch (err) {
+          backupListEl.innerHTML = '<p class="hint">' + UI.esc(err.message || 'Gagal memuatkan sandaran.') + '</p>';
+        }
+      };
+
+      backupListEl.addEventListener('click', async function (event) {
+        const btn = event.target.closest('[data-restore-backup]');
+        if (!btn) return;
+        const snapshotName = btn.getAttribute('data-restore-name');
+        const ok = await UI.confirm({
+          title: 'Pulihkan sandaran ini?',
+          message: 'Semua data semasa dalam Google Sheets akan diganti dengan kandungan ' + snapshotName + '. Sandaran keselamatan dibuat secara automatik sebelum pemulihan.',
+          confirmLabel: 'Pulihkan data',
+          cancelLabel: 'Batal',
+          danger: true
+        });
+        if (!ok) return;
+        UI.setBusy(btn, true, 'Memulihkan...');
+        try {
+          const result = await Store.restore({ backupId: btn.getAttribute('data-restore-backup') });
+          state.all = null;
+          await ensureAll(true);
+          UI.toast('Data dipulihkan. Sandaran keselamatan: ' + (result && result.safetyBackup ? result.safetyBackup.name : '—'), 'success', 7000);
+          renderSettings();
+        } catch (err) {
+          UI.setBusy(btn, false);
+          UI.toast(err.message || 'Pemulihan gagal.', 'error', 7000);
+        }
+      });
+
+      loadBackups();
     }
 
     const reloadBtn = document.getElementById('reloadBtn');
@@ -2243,9 +2588,9 @@ Saya yang menjalankan amanah,
       UI.toast('Tiada rekod untuk dieksport.', 'error');
       return;
     }
-    const lines = [mod.fields.map(function (f) { return csvCell(f.label); }).join(',')];
+    const lines = [visibleFields(mod).map(function (f) { return csvCell(f.label); }).join(',')];
     rows.forEach(function (r) {
-      lines.push(mod.fields.map(function (f) {
+      lines.push(visibleFields(mod).map(function (f) {
         if (f.type === 'file') {
           return csvCell(parseAttachments(r[f.key]).map(function (a) { return a.name + ' ' + a.url; }).join('; '));
         }

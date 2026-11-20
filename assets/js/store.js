@@ -62,6 +62,7 @@
 
   function setMode(mode) {
     writeJSON(MODE_KEY, mode === 'demo' ? 'demo' : 'live');
+    clearRole();
     status.offline = false;
     status.lastError = null;
     status.lastSync = null;
@@ -125,6 +126,32 @@
     Object.keys(localStorage).forEach(function (key) {
       if (key.indexOf(CACHE_PREFIX) === 0) localStorage.removeItem(key);
     });
+  }
+
+  /* --------------------------------------------------------------- role */
+
+  // Peranan sebenar ditentukan oleh pelayan (Code.gs). Nilai di sini hanya
+  // cache paparan supaya UI tidak berkelip; setiap baca/tulis tetap disemak
+  // di pelayan. Mod demo = pemilik peranti = admin.
+  const ROLE_KEY = 'ptis.role.v1';
+  let roleInfo = readJSON(ROLE_KEY, null);
+
+  function clearRole() {
+    roleInfo = null;
+    try { localStorage.removeItem(ROLE_KEY); } catch (e) { /* abaikan */ }
+  }
+
+  function currentRole() {
+    if (!isRemote()) return 'admin';
+    return (roleInfo && roleInfo.role) ? roleInfo.role : 'ahli';
+  }
+
+  function canSeePersonal() {
+    return currentRole() === 'admin';
+  }
+
+  function canWrite() {
+    return currentRole() !== 'viewer';
   }
 
   /* ----------------------------------------------------------- demo seed */
@@ -413,6 +440,26 @@
     isDemo: isDemo,
     setMode: setMode,
     status: status,
+    role: currentRole,
+    canSeePersonal: canSeePersonal,
+    canWrite: canWrite,
+    clearRole: clearRole,
+
+    // Peranan daripada pelayan; cache setempat dikemas kini.
+    async refreshRole() {
+      if (!isRemote()) {
+        clearRole();
+        return 'admin';
+      }
+      const data = await callRemote({ action: 'whoami' });
+      const role = String((data && data.role) || '');
+      roleInfo = {
+        role: ['admin', 'ahli', 'viewer'].indexOf(role) >= 0 ? role : 'ahli',
+        email: (data && data.email) || ''
+      };
+      writeJSON(ROLE_KEY, roleInfo);
+      return roleInfo.role;
+    },
 
     modeName: function () {
       if (!isRemote()) return 'Demo';
@@ -556,6 +603,31 @@
       if (!isRemote()) throw new Error('Lampiran hanya boleh dimuat naik apabila disambungkan ke Google Sheets.');
       const data = await readFileBase64(file);
       return callRemote({ action: 'upload', name: file.name, mime: file.type, data: data }, 120000);
+    },
+
+    /* ------------------------------------------- sandaran & pemulihan */
+
+    async backupNow() {
+      if (!isRemote()) throw new Error('Sandaran Drive hanya tersedia dalam mod Google Sheets.');
+      return callRemote({ action: 'backup' }, 120000);
+    },
+
+    async listBackups() {
+      if (!isRemote()) return [];
+      return callRemote({ action: 'backups' });
+    },
+
+    // backupId = snapshot pelayan; payload = fail JSON tempatan.
+    async restore(options) {
+      if (!isRemote()) throw new Error('Pemulihan pelayan hanya tersedia dalam mod Google Sheets.');
+      const o = options || {};
+      if (!o.backupId && !o.payload) throw new Error('Tiada sandaran dipilih.');
+      return callRemote({
+        action: 'restore',
+        confirm: true,
+        backupId: o.backupId || '',
+        payload: o.payload || null
+      }, 180000);
     },
 
     async remove(moduleKey, id) {

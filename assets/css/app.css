@@ -1839,3 +1839,122 @@ main {
   a[href^="#"]::after, a[href^="javascript"]::after { content: ""; }
   .scst-open::after { content: none; }
 }
+
+/* ------------------------------------------------- profil sekolah (v2.1) */
+
+.school-head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.school-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.school-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 0;
+}
+
+.school-card-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.school-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+.school-row:last-child { border-bottom: 0; }
+
+.school-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.school-row-main strong {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.school-row-main small {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+button.school-row { cursor: pointer; }
+button.school-row:hover .school-row-main strong { color: var(--yellow); }
+
+.peralatan-school-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 8px;
+}
+
+.peralatan-school-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.peralatan-school-link:hover { color: var(--yellow); }
+
+.scst-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.backup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--soft);
+}
+
+.backup-item strong {
+  display: block;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.backup-item small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}

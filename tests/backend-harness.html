@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PTIS — ujian pelayan (Code.gs)</title>
+<style>
+  body { font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; background:#0b0d10; color:#e8e6e3; margin:0; padding:24px; }
+  h1 { font: 600 18px/1.3 system-ui, sans-serif; margin:0 0 4px; }
+  p.sub { color:#9aa0a6; margin:0 0 20px; font-family: system-ui, sans-serif; }
+  pre { white-space: pre-wrap; margin:0 0 24px; }
+  .pass { color:#7ddc9a; }
+  .fail { color:#ff7b72; font-weight:700; }
+  .head { color:#e0a82e; margin-top:18px; }
+  #summary { font: 600 15px/1.4 system-ui, sans-serif; padding:12px 14px; border-radius:8px; background:#15181d; border:1px solid #262b33; margin-bottom:20px; }
+</style>
+</head>
+<body>
+<h1>Ujian pelayan PTIS</h1>
+  <p class="sub">Menjalankan <code>apps-script/Code.gs</code> sebenar terhadap SpreadsheetApp/DriveApp/UrlFetchApp tiruan dalam memori. Bukan sambungan ke Google sebenar. Muat semula halaman selepas mengubah <code>Code.gs</code>.</p>
+<div id="summary">Menjalankan…</div>
+<pre id="out"></pre>
+<script>
+(function () {
+  'use strict';
+
+  const out = document.getElementById('out');
+  const summary = document.getElementById('summary');
+  const log = [];
+  let pass = 0, fail = 0;
+
+  function record(name, ok, extra) {
+    if (ok) { pass++; log.push('PASS  ' + name); }
+    else { fail++; log.push('FAIL  ' + name + (extra ? '  → ' + extra : '')); }
+    return ok;
+  }
+  function head(text) { log.push(''); log.push('— ' + text + ' —'); }
+
+  // ----------------------------------------------------------- fake Sheets
+  function makeSheet(name) {
+    const rows = [];
+    const sheet = {
+      __name: name,
+      __rows: rows,
+      getLastRow: function () { return rows.length; },
+      getLastColumn: function () {
+        let max = 0;
+        rows.forEach(function (row) {
+          for (let i = row.length - 1; i >= 0; i--) {
+            const v = row[i];
+            if (v !== '' && v !== undefined && v !== null) { max = Math.max(max, i + 1); break; }
+          }
+        });
+        return max;
+      },
+      getMaxRows: function () { return Math.max(rows.length, 1000); },
+      appendRow: function (values) { rows.push(values.slice()); },
+      deleteRow: function (index) { rows.splice(index - 1, 1); },
+      setFrozenRows: function () {},
+      setColumnWidth: function () {},
+      getRange: function (row, col, numRows, numCols) {
+        const r = row - 1, c = col - 1;
+        const nr = numRows === undefined ? 1 : numRows;
+        const nc = numCols === undefined ? 1 : numCols;
+        const grid = {
+          getValues: function () {
+            const result = [];
+            for (let i = 0; i < nr; i++) {
+              const src = rows[r + i] || [];
+              const line = [];
+              for (let j = 0; j < nc; j++) {
+                const v = src[c + j];
+                line.push(v === undefined ? '' : v);
+              }
+              result.push(line);
+            }
+            return result;
+          },
+          setValues: function (values) {
+            for (let i = 0; i < values.length; i++) {
+              const ri = r + i;
+              while (rows.length <= ri) rows.push([]);
+              for (let j = 0; j < values[i].length; j++) rows[ri][c + j] = values[i][j];
+            }
+            return grid;
+          },
+          clearContent: function () {
+            for (let i = 0; i < nr; i++) {
+              const src = rows[r + i];
+              if (!src) continue;
+              for (let j = 0; j < nc; j++) if (c + j < src.length) src[c + j] = '';
+            }
+            return grid;
+          },
+          setNumberFormat: function () { return grid; },
+          setFontWeight: function () { return grid; },
+          setBackground: function () { return grid; },
+          setFontColor: function () { return grid; }
+        };
+        return grid;
+      }
+    };
+    return sheet;
+  }
+
+  const tabs = new Map();
+  const book = {
+    getName: function () { return 'PTIS Ujian'; },
+    getSheetByName: function (name) { return tabs.get(name) || null; },
+    insertSheet: function (name) { const s = makeSheet(name); tabs.set(name, s); return s; }
+  };
+
+  // ------------------------------------------------------------ fake Drive
+  const filesById = new Map();
+  const folders = new Map();
+  let fileSeq = 0, uuidSeq = 0;
+
+  function makeFolder(name) {
+    const folder = {
+      __name: name,
+      files: [],
+      createFile: function (a, b) {
+        let file;
+        if (typeof a === 'string') {
+          file = { id: 'file-' + (++fileSeq), name: a, content: String(b || ''), created: new Date() };
+        } else {
+          file = { id: 'file-' + (++fileSeq), name: (a && a.__fileName) || 'fail', content: '(binary)', created: new Date() };
+        }
+        file.size = file.content.length;
+        file.getId = function () { return file.id; };
+        file.getName = function () { return file.name; };
+        file.getBlob = function () { return { getDataAsString: function () { return file.content; } }; };
+        file.getDateCreated = function () { return file.created; };
+        file.getSize = function () { return file.size; };
+        file.setSharing = function () { return file; };
+        file.getUrl = function () { return 'https://drive.test/' + file.id; };
+        filesById.set(file.id, file);
+        folder.files.push(file);
+        return file;
+      },
+      getFiles: function () {
+        const list = folder.files.slice();
+        let i = 0;
+        return { hasNext: function () { return i < list.length; }, next: function () { return list[i++]; } };
+      }
+    };
+    return folder;
+  }
+
+  const DriveApp = {
+    Access: { ANYONE_WITH_LINK: 'anyone' },
+    Permission: { VIEW: 'view' },
+    getFoldersByName: function (name) {
+      const folder = folders.get(name);
+      return { hasNext: function () { return Boolean(folder); }, next: function () { return folder; } };
+    },
+    createFolder: function (name) { const f = makeFolder(name); folders.set(name, f); return f; },
+    getFileById: function (id) {
+      const file = filesById.get(id);
+      if (!file) throw new Error('fail tidak dijumpai');
+      return file;
+    }
+  };
+
+  // ----------------------------------------------------------- fake misc
+  const Utilities = {
+    getUuid: function () { return 'uuid-' + (++uuidSeq); },
+    formatDate: function (date, tz, fmt) {
+      const p = function (n) { return String(n).padStart(2, '0'); };
+      if (fmt === 'yyyyMMdd-HHmmss') {
+        return '' + date.getFullYear() + p(date.getMonth() + 1) + p(date.getDate()) + '-' + p(date.getHours()) + p(date.getMinutes()) + p(date.getSeconds());
+      }
+      if (fmt === 'HH:mm') return p(date.getHours()) + ':' + p(date.getMinutes());
+      return date.getFullYear() + '-' + p(date.getMonth() + 1) + '-' + p(date.getDate());
+    },
+    base64Decode: function () { return [1, 2, 3]; },
+    newBlob: function (bytes, mime, name) { return { __fileName: name, __size: (bytes || []).length }; }
+  };
+
+  const LockService = {
+    getScriptLock: function () { return { waitLock: function () {}, releaseLock: function () {}, tryLock: function () { return true; } }; }
+  };
+
+  const ContentService = {
+    MimeType: { JSON: 'application/json' },
+    createTextOutput: function (text) {
+      return { text: text, setMimeType: function () { return this; } };
+    }
+  };
+
+  const Session = { getScriptTimeZone: function () { return 'Asia/Kuala_Lumpur'; } };
+  const Logger = { log: function () {} };
+  const SpreadsheetApp = { getActiveSpreadsheet: function () { return book; } };
+
+  // fetch('../apps-script/Code.gs')
+  fetch('../apps-script/Code.gs?ts=' + Date.now(), { cache: 'no-store' })
+    .then(function (res) {
+      if (!res.ok) throw new Error('Gagal memuatkan Code.gs: HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function (source) {
+      const clientIdMatch = /const GOOGLE_CLIENT_ID = '([^']*)'/.exec(source);
+      const clientId = clientIdMatch ? clientIdMatch[1] : '';
+
+      const UrlFetchApp = {
+        fetch: function (url) {
+          const m = /id_token=([^&]+)/.exec(url);
+          const token = m ? decodeURIComponent(m[1]) : '';
+          const email = token.replace(/^tok:/, '');
+          const valid = email.indexOf('@') > 0;
+          return {
+            getResponseCode: function () { return valid ? 200 : 400; },
+            getContentText: function () {
+              return JSON.stringify({ aud: clientId, email_verified: 'true', email: email });
+            }
+          };
+        }
+      };
+
+      const factory = new Function(
+        'SpreadsheetApp', 'DriveApp', 'UrlFetchApp', 'Utilities', 'LockService',
+        'ContentService', 'Session', 'Logger',
+        source + '\nreturn { handleRequest: handleRequest, setup: setup, SHEETS: SHEETS, ADMIN_EMAILS: ADMIN_EMAILS, APP_VERSION: APP_VERSION };'
+      );
+      const api = factory(SpreadsheetApp, DriveApp, UrlFetchApp, Utilities, LockService, ContentService, Session, Logger);
+
+      const adminEmail = api.ADMIN_EMAILS[0];
+      const sesi = function (email) { return 'tok:' + email; };
+      const call = function (action, session, extra) {
+        const req = Object.assign({ action: action, session: session || '', token: '' }, extra || {});
+        const res = api.handleRequest(req);
+        try { return JSON.parse(res.text); } catch (e) { return { ok: false, code: 'BAD_JSON', error: res.text }; }
+      };
+      const byId = function (rows, id) {
+        return rows.filter(function (r) { return String(r.id) === String(id); })[0] || null;
+      };
+
+      let res;
+
+      head('setup & ping');
+      res = call('setup', sesi(adminEmail));
+      record('setup mencipta tab data + Users', res.ok && res.data.users === 'Users' && res.data.sheets.length === 6, JSON.stringify(res));
+      res = call('ping');
+      record('ping tanpa log masuk', res.ok && res.data.version === api.APP_VERSION && res.data.authEnforced === true, JSON.stringify(res).slice(0, 160));
+
+      head('peranan (whoami)');
+      const users = book.getSheetByName('Users');
+      users.appendRow(['ahli@moe.gov.my', 'ahli', 'Ahli Ujian', 'TRUE']);
+      users.appendRow(['viewer@moe.gov.my', 'viewer', 'Viewer Ujian', 'TRUE']);
+      users.appendRow(['mati@moe.gov.my', 'admin', 'Mati', 'FALSE']);
+
+      record('admin melalui ADMIN_EMAILS', (res = call('whoami', sesi(adminEmail))).data.role === 'admin' && res.data.canWrite, JSON.stringify(res));
+      record('domain sah tanpa baris Users = ahli', (res = call('whoami', sesi('guru@moe.gov.my'))).data.role === 'ahli' && res.data.canWrite, JSON.stringify(res));
+      record('viewer tidak boleh menulis', (res = call('whoami', sesi('viewer@moe.gov.my'))).data.role === 'viewer' && res.data.canWrite === false, JSON.stringify(res));
+      record('baris active=FALSE ditolak', (res = call('whoami', sesi('mati@moe.gov.my'))).code === 'AUTH_FORBIDDEN', JSON.stringify(res));
+      record('domain luar ditolak', (res = call('whoami', sesi('orang@gmail.com'))).code === 'AUTH_FORBIDDEN', JSON.stringify(res));
+      record('tanpa sesi ditolak', (res = call('whoami', '')).code === 'AUTH_REQUIRED', JSON.stringify(res));
+
+      head('data peribadi (Pasukan)');
+      const personal = { nama: 'Ali Bin Abu', noKadPengenalan: '900101-14-5678', noTelefon: '012-3456789', emel: 'ali@moe.gov.my', alamat: 'Rumah Panjang Batu 5', jawatan: 'Juruterbang', status: 'Aktif' };
+      res = call('create', sesi(adminEmail), { sheet: 'Pasukan', record: personal });
+      const pasukanId = res.data && res.data.id;
+      record('admin boleh mencipta rekod penuh', res.ok && res.data.noKadPengenalan === personal.noKadPengenalan, JSON.stringify(res).slice(0, 160));
+
+      res = call('list', sesi('guru@moe.gov.my'), { sheet: 'Pasukan' });
+      const ahliRow = byId(res.data, pasukanId);
+      record('ahli nampak baris tetapi medan peribadi kosong',
+        res.ok && ahliRow && ahliRow.nama === personal.nama && ahliRow.noKadPengenalan === '' && ahliRow.noTelefon === '' && ahliRow.emel === '' && ahliRow.alamat === '',
+        JSON.stringify(ahliRow));
+
+      res = call('bootstrap', sesi('guru@moe.gov.my'));
+      const bootRow = byId(res.data.Pasukan, pasukanId);
+      record('bootstrap juga melalui penapisan', res.ok && bootRow && bootRow.noKadPengenalan === '', JSON.stringify(bootRow));
+
+      res = call('update', sesi('guru@moe.gov.my'), { sheet: 'Pasukan', id: pasukanId, record: { nama: 'Ali Bin Abu (dikemas kini)', noKadPengenalan: '' } });
+      record('ahli boleh mengemas kini medan biasa', res.ok && res.data.nama.indexOf('dikemas kini') > 0, JSON.stringify(res).slice(0, 160));
+
+      res = call('list', sesi(adminEmail), { sheet: 'Pasukan' });
+      const adminRow = byId(res.data, pasukanId);
+      record('No. KP lama tidak dipadam oleh suntingan ahli', adminRow.noKadPengenalan === personal.noKadPengenalan, JSON.stringify(adminRow));
+      record('telefon/e-mel/alamat juga terpelihara', adminRow.noTelefon === personal.noTelefon && adminRow.emel === personal.emel && adminRow.alamat === personal.alamat, JSON.stringify(adminRow));
+
+      res = call('create', sesi('guru@moe.gov.my'), { sheet: 'Pasukan', record: { nama: 'Siti', noKadPengenalan: '111', noTelefon: '222' } });
+      const ahliCreatedId = res.data && res.data.id;
+      res = call('list', sesi(adminEmail), { sheet: 'Pasukan' });
+      const ahliCreated = byId(res.data, ahliCreatedId);
+      record('ahli tidak boleh mengisi medan peribadi semasa cipta', !!ahliCreated && ahliCreated.noKadPengenalan === '' && ahliCreated.noTelefon === '', JSON.stringify(ahliCreated));
+
+      res = call('update', sesi(adminEmail), { sheet: 'Pasukan', id: pasukanId, record: { noKadPengenalan: '900101-14-9999' } });
+      record('admin boleh menukar No. KP', res.ok && res.data.noKadPengenalan === '900101-14-9999', JSON.stringify(res).slice(0, 160));
+
+      head('kebenaran tindakan');
+      record('viewer boleh membaca senarai', (res = call('list', sesi('viewer@moe.gov.my'), { sheet: 'Peralatan' })).ok === true, JSON.stringify(res).slice(0, 120));
+      record('viewer tidak boleh mencipta', (res = call('create', sesi('viewer@moe.gov.my'), { sheet: 'Peralatan', record: { jenisPeralatan: 'PC' } })).code === 'READ_ONLY', JSON.stringify(res));
+      record('viewer tidak boleh memadam', (res = call('delete', sesi('viewer@moe.gov.my'), { sheet: 'Pasukan', id: pasukanId })).code === 'READ_ONLY', JSON.stringify(res));
+      record('ahli tidak boleh setup', (res = call('setup', sesi('guru@moe.gov.my'))).code === 'FORBIDDEN', JSON.stringify(res));
+      record('ahli tidak boleh sandar', (res = call('backup', sesi('guru@moe.gov.my'))).code === 'FORBIDDEN', JSON.stringify(res));
+      record('nama tab tidak sah ditolak', (res = call('list', sesi(adminEmail), { sheet: 'Users' })).ok === false, JSON.stringify(res).slice(0, 120));
+
+      head('sandaran');
+      res = call('backup', sesi(adminEmail));
+      const firstBackup = res.data;
+      record('sandaran mencipta fail JSON', res.ok && /^ptis-sandaran-\d{8}-\d{6}\.json$/.test(firstBackup.name), JSON.stringify(res));
+      record('sandaran mengira semua tab', res.ok && firstBackup.counts.Pasukan === 2 && firstBackup.counts.Peralatan === 0, JSON.stringify(firstBackup.counts));
+      record('folder Drive dicipta', folders.has('PTIS Sandaran'));
+
+      res = call('backups', sesi(adminEmail));
+      record('senarai sandaran mengandungi snapshot', res.ok && res.data.length === 1 && res.data[0].id === firstBackup.id, JSON.stringify(res).slice(0, 160));
+
+      head('pemulihan');
+      res = call('delete', sesi(adminEmail), { sheet: 'Pasukan', id: pasukanId });
+      record('admin boleh memadam', res.ok === true, JSON.stringify(res));
+      record('rekod hilang selepas padam', call('list', sesi(adminEmail), { sheet: 'Pasukan' }).data.length === 1);
+
+      res = call('restore', sesi(adminEmail), { backupId: firstBackup.id, confirm: false });
+      record('pemulihan tanpa confirm ditolak', res.ok === false && /Pengesahan/.test(res.error), JSON.stringify(res));
+
+      res = call('restore', sesi('guru@moe.gov.my'), { backupId: firstBackup.id, confirm: true });
+      record('ahli tidak boleh memulihkan', res.code === 'FORBIDDEN', JSON.stringify(res));
+
+      res = call('restore', sesi(adminEmail), { backupId: firstBackup.id, confirm: true });
+      record('pemulihan berjaya', res.ok === true && res.data.restored.Pasukan === 2, JSON.stringify(res).slice(0, 200));
+      record('sandaran keselamatan dibuat dahulu', res.ok && res.data.safetyBackup && res.data.safetyBackup.id !== firstBackup.id, JSON.stringify(res.ok ? res.data.safetyBackup : res));
+      record('dua sandaran dalam detik sama tidak berkongsi nama', res.ok && res.data.safetyBackup.name !== firstBackup.name, JSON.stringify(res.ok ? [firstBackup.name, res.data.safetyBackup.name] : res));
+
+      const afterRestore = call('list', sesi(adminEmail), { sheet: 'Pasukan' }).data;
+      const restored = byId(afterRestore, pasukanId);
+      record('rekod yang dipadam kembali selepas pemulihan', !!restored && restored.nama.indexOf('dikemas kini') > 0, JSON.stringify(afterRestore));
+      record('data peribadi kekal dalam pemulihan admin', !!restored && restored.noKadPengenalan === '900101-14-9999', JSON.stringify(restored));
+
+      res = call('backups', sesi(adminEmail));
+      record('senarai kini ada sandaran keselamatan', res.ok && res.data.length === 2, JSON.stringify(res.data.map(function (b) { return b.name; })));
+
+      head('pemulihan daripada fail (payload)');
+      const payload = { app: 'PTIS', modules: { pergerakan: [{ tarikh: '2026-11-01', sekolah: 'SK Ujian', jenisPergerakan: 'Lawatan', status: 'Selesai' }] } };
+      res = call('restore', sesi(adminEmail), { payload: payload, confirm: true });
+      record('payload guna kunci modul diterima', res.ok === true && res.data.restored.Pergerakan === 1, JSON.stringify(res).slice(0, 200));
+      record('tab pergerakan kini ada 1 rekod', call('list', sesi(adminEmail), { sheet: 'Pergerakan' }).data.length === 1);
+      record('pasukan tidak disentuh oleh payload separa', call('list', sesi(adminEmail), { sheet: 'Pasukan' }).data.length === 2);
+
+      const emptyPayload = { modules: { tiadaTab: [{ a: 1 }] } };
+      res = call('restore', sesi(adminEmail), { payload: emptyPayload, confirm: true });
+      record('payload tanpa tab dikenali ditolak', res.ok === false, JSON.stringify(res));
+
+      res = call('restore', sesi(adminEmail), { payload: null, backupId: 'file-tidak-wujud', confirm: true });
+      record('backupId tidak sah ditolak', res.ok === false, JSON.stringify(res));
+
+      head('selepas pemulihan');
+      res = call('list', sesi(adminEmail), { sheet: 'Pergerakan' });
+      record('rekod yang dipulihkan boleh dibaca semula', res.ok && res.data[0].sekolah === 'SK Ujian', JSON.stringify(res.data));
+      res = call('create', sesi(adminEmail), { sheet: 'KunjungBantu', record: { tarikh: '2026-11-02', sekolah: 'SK Ujian', status: 'Draf' } });
+      record('tulis masih berfungsi selepas pemulihan', res.ok === true, JSON.stringify(res).slice(0, 140));
+    })
+    .catch(function (err) {
+      fail++;
+      log.push('FAIL  harness: ' + (err && err.message ? err.message : err));
+    })
+    .then(function () {
+      const lines = log.map(function (line) {
+        if (line.indexOf('PASS') === 0) return '<span class="pass">' + line + '</span>';
+        if (line.indexOf('FAIL') === 0) return '<span class="fail">' + line + '</span>';
+        if (line.indexOf('—') === 0) return '<span class="head">' + line + '</span>';
+        return line;
+      });
+      out.innerHTML = lines.join('\n');
+      summary.textContent = pass + ' lulus · ' + fail + ' gagal';
+      summary.style.color = fail ? '#ff7b72' : '#7ddc9a';
+      window.__harness = { pass: pass, fail: fail, log: log };
+    });
+})();
+</script>
+</body>
+</html>

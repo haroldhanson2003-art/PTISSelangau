@@ -71,6 +71,8 @@
     Object.keys(localStorage).forEach(function (key) {
       if (key.indexOf(CACHE_PREFIX) === 0) localStorage.removeItem(key);
     });
+    // Cache peranan mesti dibuang apabila akaun berubah.
+    localStorage.removeItem('ptis.role.v1');
   }
 
   // Dipanggil oleh index.html apabila log masuk diperlukan: buang cache tempatan, kemudian ke halaman log masuk.
