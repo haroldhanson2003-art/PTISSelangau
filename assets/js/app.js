@@ -154,7 +154,7 @@
       const rows = state.all && state.all[key] ? state.all[key] : [];
       el.textContent = key === 'scst'
         ? ((APP_CONFIG.selangauSchools || []).length)
-        : rows.length;
+        : key === 'peralatan' ? peralatanUnits(rows) : rows.length;
     });
   }
 
@@ -467,7 +467,9 @@
     return '<a class="module-card tone-' + mod.tone + '" href="#/m/' + key + '" data-module="' + key + '">' +
       '<div class="module-top">' +
         '<span class="module-icon">' + UI.icon(mod.icon) + '</span>' +
-        '<span class="module-count">' + (isLink ? scstSchools().length + ' sekolah' : rows.length + ' rekod') + '</span>' +
+        '<span class="module-count">' + (isLink
+          ? scstSchools().length + ' sekolah'
+          : key === 'peralatan' ? peralatanUnits(rows) + ' unit' : rows.length + ' rekod') + '</span>' +
       '</div>' +
       '<h3>' + UI.esc(mod.title) + '</h3>' +
       '<p>' + UI.esc(mod.description) + '</p>' +
@@ -594,6 +596,9 @@
   function peralatanQty(r) {
     const n = Number(r && r.bilangan);
     return (isNaN(n) || n < 1) ? 1 : n;
+  }
+  function peralatanUnits(rows) {
+    return (rows || []).reduce(function (sum, r) { return sum + peralatanQty(r); }, 0);
   }
   function peralatanSummary(rows) {
     const bySchool = {};
