@@ -34,7 +34,8 @@
   /* ================================================================ boot */
 
   function init() {
-    if (Auth.required() && Store.isRemote() && !Auth.getSession()) {
+    if (Auth && Auth.required && Auth.required() && Store.isRemote() &&
+        Auth.getSession && !Auth.getSession() && Auth.requireSignIn) {
       Auth.requireSignIn();
       return;
     }
@@ -79,7 +80,8 @@
 
   function registerSW() {
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-      navigator.serviceWorker.register('sw.js').catch(function () { /* tidak kritikal */ });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+        .catch(function () { /* tidak kritikal */ });
     }
   }
 
