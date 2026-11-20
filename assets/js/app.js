@@ -186,6 +186,14 @@
     updateSyncPill();
   }
 
+  // Bertukar daripada data demo kepada data sebenar Google Sheets.
+  function connectLive() {
+    if (!Store.setMode) return;
+    Store.setMode('live');
+    if (APP_CONFIG.appsScriptUrl) Store.saveConfig({ url: APP_CONFIG.appsScriptUrl });
+    location.replace('index.html');
+  }
+
   function updateSyncPill() {
     const syncPill = document.getElementById('syncPill');
     const syncLabel = document.getElementById('syncLabel');
@@ -358,6 +366,16 @@
           '</div>' +
         '</aside>' +
       '</section>' +
+
+      (Store.isRemote() ? '' :
+        '<section class="demo-banner" role="status">' +
+          '<div class="demo-banner-text">' +
+            '<strong>Mod Demo aktif</strong>' +
+            '<span>Data di bawah ialah contoh pada peranti ini. Sambung ke Google Sheets untuk melihat data sebenar pasukan.</span>' +
+          '</div>' +
+          '<button class="btn btn-primary" type="button" data-action="go-live">' +
+            UI.icon('refresh') + 'Sambung ke Google Sheets</button>' +
+        '</section>') +
 
       '<section class="kpi-grid" aria-label="Ringkasan data">' +
         kpiCard('Jumlah Rekod', total, 'Semua modul data', 'grid', 'blue') +
@@ -2175,6 +2193,7 @@ Saya yang menjalankan amanah,
     const connectBtn = document.getElementById('connectBtn');
     if (connectBtn) {
       connectBtn.addEventListener('click', function () {
+        if (Store.setMode) Store.setMode('live');
         Store.saveConfig({ url: APP_CONFIG.appsScriptUrl });
         location.reload();
       });
@@ -2269,6 +2288,7 @@ Saya yang menjalankan amanah,
         const key = actionEl.getAttribute('data-key');
         const id = actionEl.getAttribute('data-id');
 
+        if (action === 'go-live') { event.preventDefault(); connectLive(); return; }
         if (action === 'new') { event.preventDefault(); openForm(key); return; }
         if (action === 'edit') { event.preventDefault(); event.stopPropagation(); UI.closeModal(); openForm(key, id); return; }
         if (action === 'detail') { event.preventDefault(); event.stopPropagation(); openDetail(key, id); return; }

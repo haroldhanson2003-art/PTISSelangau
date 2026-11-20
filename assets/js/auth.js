@@ -117,6 +117,8 @@
       name: payload.name || '',
       exp: payload.exp
     }));
+    // Log masuk sentiasa membawa kembali ke data sebenar (Google Sheets).
+    if (window.Store && Store.setMode) Store.setMode('live');
     location.replace('index.html');
   }
 

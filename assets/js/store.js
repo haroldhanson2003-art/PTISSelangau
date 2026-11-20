@@ -8,6 +8,7 @@
 
   const CFG_KEY = 'ptis.config.v1';
   const DEMO_KEY = 'ptis.demo.v10';
+  const MODE_KEY = 'ptis.mode.v1';
   const CACHE_PREFIX = 'ptis.cache.v1.';
 
   const status = { offline: false, lastError: null, lastSync: null };
@@ -53,12 +54,31 @@
 
   /* ------------------------------------------------------------- config */
 
+  // Mod demo ialah pilihan berasingan daripada URL pangkalan data.
+  // (Dahulu butang demo menulis url kosong, lalu sambungan Google Sheets hilang.)
+  function isDemo() {
+    return readJSON(MODE_KEY, 'live') === 'demo';
+  }
+
+  function setMode(mode) {
+    writeJSON(MODE_KEY, mode === 'demo' ? 'demo' : 'live');
+    status.offline = false;
+    status.lastError = null;
+    status.lastSync = null;
+  }
+
   function getConfig() {
     const saved = readJSON(CFG_KEY, {}) || {};
+    const configured = String(APP_CONFIG.appsScriptUrl || '');
+    let url = Object.prototype.hasOwnProperty.call(saved, 'url')
+      ? String(saved.url || '')
+      : configured;
+
+    // Pulihkan URL yang dikosongkan oleh versi lama semasa pengguna memilih demo.
+    if (!url && !isDemo()) url = configured;
+
     return {
-      url: Object.prototype.hasOwnProperty.call(saved, 'url')
-        ? String(saved.url || '')
-        : (APP_CONFIG.appsScriptUrl || ''),
+      url: url,
       token: Object.prototype.hasOwnProperty.call(saved, 'token')
         ? String(saved.token || '')
         : (APP_CONFIG.apiToken || ''),
@@ -86,7 +106,7 @@
   }
 
   function isRemote() {
-    return Boolean(getConfig().url);
+    return !isDemo() && Boolean(getConfig().url);
   }
 
   function sessionToken() {
@@ -390,6 +410,8 @@
     getConfig: getConfig,
     saveConfig: saveConfig,
     isRemote: isRemote,
+    isDemo: isDemo,
+    setMode: setMode,
     status: status,
 
     modeName: function () {
