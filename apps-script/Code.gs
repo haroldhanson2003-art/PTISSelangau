@@ -17,7 +17,7 @@
  *   - Jangan kongsi URL /exec atau TOKEN secara terbuka.
  */
 
-const TOKEN = ''; // Pilihan: frasa rahsia panjang, contoh: 'ptis-2026-...'
+const TOKEN = 'b914f006e8c8ae1fddceb3cc8ff5b98492b3125f3340c7865902398f0ad861a4'; // Frasa rahsia API (mesti sama dengan apiToken dalam config.js)
 const GOOGLE_CLIENT_ID = '770091761834-tm0gtjmn5g3ol6tpcrth18cuv7hfbo3q.apps.googleusercontent.com'; // OAuth Client ID (Web application). Kosong = log masuk dimatikan.
 const ALLOWED_DOMAINS = ['moe.gov.my', 'moe-dl.edu.my']; // Mesti sama dengan allowedDomains dalam config.js
 const TIMEZONE = Session.getScriptTimeZone();

@@ -262,9 +262,13 @@
     }
     syncLabel.textContent = text;
     syncPill.className = 'sync-pill is-' + tone;
-    syncPill.title = lastSync
-      ? text + ' — Segerak terakhir: ' + new Date(lastSync).toLocaleString('ms-MY')
-      : text + ' — ' + (remote ? 'Belum disegerak' : 'Data contoh disimpan dalam pelayar');
+    if (remote && Store.status && Store.status.offline) {
+      syncPill.title = 'Luar talian — ' + (Store.status.lastError || 'Sambungan terganggu.') + ' Klik untuk cuba semula.';
+    } else {
+      syncPill.title = lastSync
+        ? text + ' — Segerak terakhir: ' + new Date(lastSync).toLocaleString('ms-MY')
+        : text + ' — ' + (remote ? 'Belum disegerak' : 'Data contoh disimpan dalam pelayar');
+    }
   }
 
   /* ============================================================== router */
@@ -362,7 +366,8 @@
       updateNavCounts();
       updateModeUI();
       if (Store.status.offline) {
-        UI.toast('Mod luar talian: data cache dipaparkan.', 'error', 5200);
+        const reason = (Store.status.lastError || '').trim();
+        UI.toast('Mod luar talian: data cache dipaparkan.' + (reason ? ' Sebab: ' + reason : ''), 'error', 7000);
       }
       return all;
     }).finally(function () {
@@ -414,6 +419,16 @@
           '</div>' +
         '</aside>' +
       '</section>' +
+
+      (Store.isRemote() && Store.status && Store.status.offline
+        ? '<section class="error-banner" role="alert">' +
+          '<div class="error-banner-text">' +
+            '<strong>Sambungan ke Google Sheets terganggu</strong>' +
+            '<span>' + UI.esc(Store.status.lastError || 'Tidak dapat membaca data. Data cache dipaparkan.') + '</span>' +
+          '</div>' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-action="retry-sync">' + UI.icon('refresh') + 'Cuba semula</button>' +
+        '</section>'
+        : '') +
 
       (Store.isRemote() ? '' :
         '<section class="demo-banner" role="status">' +
@@ -2639,6 +2654,7 @@ Saya yang menjalankan amanah,
         const id = actionEl.getAttribute('data-id');
 
         if (action === 'go-live') { event.preventDefault(); connectLive(); return; }
+        if (action === 'retry-sync') { event.preventDefault(); ensureAll(true).then(function () { renderHome(); }).catch(function () {}); return; }
         if (action === 'new') { event.preventDefault(); openForm(key); return; }
         if (action === 'edit') { event.preventDefault(); event.stopPropagation(); UI.closeModal(); openForm(key, id); return; }
         if (action === 'detail') { event.preventDefault(); event.stopPropagation(); openDetail(key, id); return; }

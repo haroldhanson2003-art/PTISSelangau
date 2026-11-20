@@ -979,6 +979,10 @@ main {
 .demo-banner-text { display: grid; gap: 3px; min-width: 220px; }
 .demo-banner-text strong { font-size: 13px; letter-spacing: .2px; }
 .demo-banner-text span { font-size: 12.3px; color: var(--muted); line-height: 1.45; }
+.error-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid rgba(220,38,38,.45); background: rgba(220,38,38,.10); border-radius: 14px; }
+.error-banner-text { display: grid; gap: 3px; min-width: 220px; }
+.error-banner-text strong { font-size: 13px; letter-spacing: .2px; color: #fca5a5; }
+.error-banner-text span { font-size: 12.3px; color: var(--muted); line-height: 1.45; word-break: break-word; }
 .file-list { display: grid; gap: 6px; margin-bottom: 8px; }
 .file-item { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.03); min-width: 0; }
 .file-item.is-pending { border-style: dashed; }

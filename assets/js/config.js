@@ -10,7 +10,7 @@ window.APP_CONFIG = {
 
   // Endpoint Apps Script yang digunakan oleh aplikasi. Nilai ini boleh dilihat dalam kod pelayar.
   appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzTcMXBF4g_hOyphMrivqcXZ7V1aTskZrwjgQsgjKiZTuVJgUxDuspvG6HUSK6X8r--/exec',
-  apiToken: '',
+  apiToken: 'b914f006e8c8ae1fddceb3cc8ff5b98492b3125f3340c7865902398f0ad861a4',
 
   // Saluran laporan sekolah
   isdUrl: 'https://isd.moe.gov.my',
@@ -24,9 +24,9 @@ window.APP_CONFIG = {
     allowedDomains: ['moe.gov.my', 'moe-dl.edu.my']
   },
 
-  // Senarai pentadbir legacy; tiada perlindungan akses sisi pelayan yang bergantung pada nilai ini.
-  adminEmails: ['haroldhanson@moe.gov.my'],
-
+  // Peranan sebenar ditentukan di pelayan (Code.gs: ADMIN_EMAILS / tab Users).
+  // Nilai ini hanya rujukan paparan dan TIDAK memberi akses.
+  adminEmails: [],
   // Tempoh tamat permintaan API (ms)
   requestTimeout: 25000,
 
