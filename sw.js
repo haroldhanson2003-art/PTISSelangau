@@ -2,7 +2,7 @@
    Cache shell aplikasi supaya boleh dibuka luar talian.
    Data Google Sheets sentiasa diambil dari rangkaian (dengan cache sandaran di localStorage). */
 
-const VERSION = 'ptis-v2.0.0';
+const VERSION = 'ptis-v2.0.1';
 const CACHE = VERSION;
 const ASSET_VERSION = VERSION.replace('ptis-v', '');
 
@@ -62,24 +62,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Rangkaian dahulu supaya versi baharu sentiasa diambil; cache hanya
+  // digunakan apabila peranti luar talian. Ini mengelakkan campuran fail
+  // lama/baru yang boleh menyebabkan skrin kosong selepas kemas kini.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) {
-        // Stale-while-revalidate untuk aset statik.
-        fetch(request).then((response) => {
-          if (response && response.ok) {
-            caches.open(CACHE).then((cache) => cache.put(request, response)).catch(() => {});
-          }
-        }).catch(() => {});
-        return cached;
-      }
-      return fetch(request).then((response) => {
+    fetch(request)
+      .then((response) => {
         if (response && response.ok) {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
   );
 });

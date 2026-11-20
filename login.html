@@ -6,8 +6,8 @@
   <title>Log masuk · PTIS</title>
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#0b0d10">
-  <link rel="icon" href="assets/img/favicon-64.png?v=2.0.0" type="image/png" sizes="64x64">
-  <link rel="stylesheet" href="assets/css/app.css?v=2.0.0">
+  <link rel="icon" href="assets/img/favicon-64.png?v=2.0.1" type="image/png" sizes="64x64">
+  <link rel="stylesheet" href="assets/css/app.css?v=2.0.1">
 </head>
 <body>
   <main class="auth-gate">
@@ -18,21 +18,54 @@
       <div id="authButton" class="auth-button"></div>
       <p id="authError" class="auth-error" role="alert" hidden></p>
       <button type="button" class="btn btn-ghost" id="authDemo">Teruskan dalam Mod Demo</button>
+      <button type="button" class="auth-help" id="authReset">Halaman tidak berfungsi? Kosongkan cache</button>
     </div>
   </main>
 
-  <script src="assets/js/config.js?v=2.0.0"></script>
-  <script src="assets/js/auth.js?v=2.0.0"></script>
-  <script src="assets/js/store.js?v=2.0.0"></script>
+  <script src="assets/js/config.js?v=2.0.1"></script>
+  <script src="assets/js/auth.js?v=2.0.1"></script>
+  <script src="assets/js/store.js?v=2.0.1"></script>
   <script>
     (function () {
-      if (!Auth || !Auth.required || !Auth.required() || (Auth.getSession && Auth.getSession())) {
+      var A = window.Auth;
+      var S = window.Store;
+
+      function resetAndReload() {
+        var jobs = [];
+        try {
+          if (window.caches && caches.keys) jobs.push(caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          }));
+        } catch (e) { /* abaikan */ }
+        try {
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (r) { return r.unregister(); }));
+            }));
+          }
+        } catch (e) { /* abaikan */ }
+        Promise.all(jobs).catch(function () {}).then(function () {
+          location.replace('login.html?r=' + Date.now());
+        });
+      }
+
+      document.getElementById('authReset').addEventListener('click', resetAndReload);
+
+      if (!A || !A.required || !A.required() || (A.getSession && A.getSession())) {
         location.replace('index.html');
         return;
       }
-      Auth.renderLogin({
+
+      if (typeof A.renderLogin !== 'function') {
+        var err = document.getElementById('authError');
+        err.textContent = 'Skrip log masuk tidak dimuatkan. Tekan "Kosongkan cache" di bawah.';
+        err.hidden = false;
+        return;
+      }
+
+      A.renderLogin({
         onDemo: function () {
-          Store.saveConfig({ url: '' });
+          if (S && S.saveConfig) S.saveConfig({ url: '' });
           location.replace('index.html');
         }
       });

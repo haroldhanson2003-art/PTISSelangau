@@ -4,6 +4,15 @@
 (function () {
   'use strict';
 
+  // auth.js dimuatkan sebelum fail ini. Jika cache lama menyebabkan ia tiada,
+  // guna pengganti kosong supaya aplikasi tetap boleh dibuka (tidak skrin putih).
+  const AUTH = (typeof window !== 'undefined' && window.Auth) ? window.Auth : {
+    required: function () { return false; },
+    getSession: function () { return null; },
+    requireSignIn: function () { },
+    signOut: function () { }
+  };
+
   const view = document.getElementById('view');
   const sidenav = document.getElementById('sidenav');
   const bottomnav = document.getElementById('bottomnav');
@@ -34,9 +43,8 @@
   /* ================================================================ boot */
 
   function init() {
-    if (Auth && Auth.required && Auth.required() && Store.isRemote() &&
-        Auth.getSession && !Auth.getSession() && Auth.requireSignIn) {
-      Auth.requireSignIn();
+    if (AUTH.required() && Store.isRemote() && !AUTH.getSession()) {
+      AUTH.requireSignIn();
       return;
     }
     document.getElementById('year').textContent = new Date().getFullYear();
@@ -1959,15 +1967,15 @@ Saya yang menjalankan amanah,
               '<div><span>Rekod cache</span><strong id="settingsCacheCount">' + cache.count + ' rekod</strong></div>' +
               '<div><span>Cache terakhir</span><strong id="settingsCacheNewest">' + (cache.newest ? UI.fmtDateTime(cache.newest) : '—') + '</strong></div>' +
               '<div><span>Penyegerakan terakhir</span><strong id="settingsLastSync">' + (Store.status.lastSync ? UI.fmtDateTime(Store.status.lastSync) : '—') + '</strong></div>' +
-              (Auth.getSession() ? '<div><span>Log masuk sebagai</span><strong>' + UI.esc(Auth.getSession().email) + '</strong></div>' : '') +
+              (AUTH.getSession() ? '<div><span>Log masuk sebagai</span><strong>' + UI.esc(AUTH.getSession().email) + '</strong></div>' : '') +
             '</div>' +
             '<div class="form-actions form-actions--wrap">' +
               '<button class="btn btn-ghost" id="backupBtn">' + UI.icon('download') + 'Sandaran JSON</button>' +
               '<button class="btn btn-ghost" id="importBtn">' + UI.icon('upload') + 'Import JSON</button>' +
               '<button class="btn btn-ghost" id="reloadBtn">' + UI.icon('refresh') + 'Muat Semula</button>' +
               (remote ? '' : '<button class="btn btn-danger-ghost" id="resetBtn">' + UI.icon('refresh') + 'Set Semula Demo</button>') +
-              (!remote && Auth.required() ? '<button class="btn btn-ghost" id="connectBtn">' + UI.icon('refresh') + 'Sambung ke Google Sheets</button>' : '') +
-              (remote && Auth.getSession() ? '<button class="btn btn-ghost" id="logoutBtn">' + UI.icon('logout') + 'Log Keluar</button>' : '') +
+              (!remote && AUTH.required() ? '<button class="btn btn-ghost" id="connectBtn">' + UI.icon('refresh') + 'Sambung ke Google Sheets</button>' : '') +
+              (remote && AUTH.getSession() ? '<button class="btn btn-ghost" id="logoutBtn">' + UI.icon('logout') + 'Log Keluar</button>' : '') +
             '</div>' +
             '<input type="file" id="importFile" accept="application/json,.json" hidden>' +
             '<p class="hint">Import JSON hanya tersedia dalam mod demo. Untuk Google Sheets, gunakan menu Fail → Import dalam hamparan.</p>' +
@@ -2174,7 +2182,7 @@ Saya yang menjalankan amanah,
 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', function () { Auth.signOut(); });
+      logoutBtn.addEventListener('click', function () { AUTH.signOut(); });
     }
 
     const installBtn = document.getElementById('installBtn');
